@@ -7,7 +7,6 @@ function UnsafeRothsteinTrager(f, g)
     b := MultivariatePolynomial(PP, g, 1);
 
     r := UnivariatePolynomial(Resultant(a - z * Derivative(b, y), b, y));
-    print r;
     F, roots := SplittingField(r: Abs := true, Opt := true); // can we name the algebraic extensions?
     // Would be nice if x was replaced with the label of the indeterminant
     // in the input
@@ -22,11 +21,16 @@ intrinsic RothsteinTrager(num :: RngUPolElt, denom :: RngUPolElt) -> SeqEnum, Fl
     Perform the Rothstein-Trager algorithm on the numerate, denominator input.
     Return a list of <constant, logarithm argument> pairs.
 }
-    // verify that the conditions of the theorem are met.
+    // verify that the input is well-formed and that the conditions of the
+    // theorem are met.
+    require denom ne 0 : "Denominator is the zero polynomial";
     require num ne 0 : "Input is the zero polynomial";
-    require Type(num) eq Type(denom): "Polynomials are not from the same ring";
-    require Type(num) eq RngUPolElt: "Polynomials are not univariate";
-    require Degree(num) lt Degree(denom): "Degree of argument 1 must be less than degree argument 2";
+    require IsField(BaseRing(num)) and IsField(BaseRing(denom))
+        : "inputs must come from a field";
+    require BaseRing(num) eq BaseRing(denom)
+        : "Polynomials must come from the same field";
+    require Degree(num) lt Degree(denom)
+        : "Degree of argument 1 must be less than degree argument 2";
     require GCD(num, denom) eq 1: "Polynomials must be coprime";
     require LeadingCoefficient(denom) eq 1: "Argument 2 must be monic";
     require IsSquarefree(denom): "Argument 2 must be squarefree";
@@ -35,40 +39,86 @@ intrinsic RothsteinTrager(num :: RngUPolElt, denom :: RngUPolElt) -> SeqEnum, Fl
 end intrinsic;
 
 
-intrinsic RationalIntegral(f :: FldFunRatUElt) -> FldFunRatUElt, SeqEnum
+function ConstantExtensionWithLabels(F, K)
+    G, hm := ConstantFieldExtension(F, K);
+    AssignNames(~G, [Sprint(F.1)]);
+    return G, hm;
+end function;
+
+
+function LogarithmicExtensionWithLabels(F, logarithm_arg)
+    G := LogarithmicFieldExtension(
+            F, F ! (Derivative(logarithm_arg) / logarithm_arg));
+    AssignNames(~G, [Sprintf("log(%o)", logarithm_arg)]);
+    return G;
+end function;
+
+
+intrinsic RationalIntegral(f :: RngDiffElt, F :: RngDiff) -> RngDiffElt, RngDiff, Map
 {
-    Integrate the given rational function. Return the part of the integral in
-    the function field (up to some algebraic extensions of the constant field),
-    a list of <constant, logarithm argument> pairs and the new constant field.
+    Integrate the given rational function using Hermite's method and then
+    Rothstein-Trager for the rational part.
+
+    This function assumes that:
+        - Every rational function is always represented such that the numerator
+          and denominator have GCD 1, and the denominator is monic.
+
+    All algorithms here are taked from Algorithms for Computer Algebra
+    (Geddes et al)
 }
-    K := BaseRing(Denominator(f)); // constant field
-    F := FieldOfFractions(PolynomialRing(K));
-    if f eq 0 then
-        return F ! 0;
-    end if;
+    require IsAlgebraicDifferentialField(F)
+        : "Input must be an algebraic differential field";
+    require f in F : "first input is not a member of the second";
+    // not sure if this is sufficient for F to be finite algebraic over Q, need to test
+    require Type(BaseRing(ConstantField(F))) eq FldRat
+        : "Constant field is not a finite extension of Q";
 
-    // write f as a + p/q, deg p < deg q, (p, q) = 1, q monic.
-    p := Numerator(f); // numerator of rational part of input
-    q := Denominator(f); // denominator of rational part of input
-    a, r := Quotrem(p, q); // a is polynomial part of input
-    g := GCD(r, q) * LeadingCoefficient(q); // note the GCD is monic
-    p := r / g;
-    q := q / g; // monic
+    if f eq F ! 0 then return f; end if;
 
-    rational_part := elt< F | Integral(a), 1>; // rational part of integral f
-    sfp := SquarefreePartialFractionDecomposition(p/q); // [<factor, power, numerator>]
-    // partial fractions trick
-    log_part := [];
-    for term in sfp do
-        tm := term;
+    // bit of a hack, shouldn't need to do this in logarithmic or exponential
+    // cases, fingers crossed we can just use Eltseq there.
+    R := RationalFunctionField(ConstantField(F));
+    num := Numerator(R ! f);
+    denom := Denominator(R ! f);
+
+    // fast simplification; works assuming gcd(num, denom) = 1
+    poly_part, num := Quotrem(num, denom);
+
+    rational_part := elt< R | Integral(poly_part), 1>;
+    logarithmic_part := F ! 0;
+    // G will to be final diff field, hm always homomorphism F to (current) G
+    G, hm := ConstantExtensionWithLabels(F, ConstantField(F));
+
+    for term in SquarefreePartialFractionDecomposition(num/denom) do
+        tm := term; // t = <factor, power, numerator>, can't mutate term
         while tm[2] gt 1 do
+            // Hermite reduction step
             c, s, t := XGCD(tm[1], Derivative(tm[1]));
-            rational_part +:= elt< F | (-tm[3] * t) / (tm[2] - 1), tm[1]^(tm[2] - 1)>;
+            rational_part +:= elt< R | (-tm[3] * t) / (tm[2] - 1), tm[1]^(tm[2] - 1)>;
             tm[3] *:= s + (Derivative(t) / (tm[2] - 1));
             tm[2] -:= 1;
         end while;
-        log_part cat:= UnsafeRothsteinTrager(tm[3], tm[1]);
-    end for;
 
-    return rational_part, log_part;
+        if (R ! tm[3] eq 0) then continue; end if;
+
+        logs, ConstFld := UnsafeRothsteinTrager(tm[3], tm[1]);
+
+        // expand constant field of G as needed
+        if Type(ConstantField(G)) ne FldNum then // no alg. extensions
+            G, hm := ConstantExtensionWithLabels(F, ConstFld); // might be trivial
+        elif Type(ConstFld) eq FldNum then // both G, ConstFld have alg. exts.
+            G, hm := ConstantExtensionWithLabels(
+                    F, Compositum(ConstantField(G), ConstFld));
+        end if; // last case is ConstFld = Q, so nothing to do there
+
+        logarithmic_part := G ! logarithmic_part;
+
+        // add necessary logarithmic extensions
+        for log in logs do // log is <constant, arg> pair
+            G := LogarithmicExtensionWithLabels(G, log[2]);
+            logarithmic_part +:= log[1]*G.1;
+        end for;
+
+    end for;
+    return logarithmic_part + (G ! rational_part), G, hm;
 end intrinsic;
