@@ -1,6 +1,6 @@
 # magma-integration
 
-Example:
+Examples of Rational Integration:
 ```
 > F<x> := RationalDifferentialField(RationalField());
 >
@@ -24,4 +24,12 @@ log(x^3 - x^2 + x - 1) + 1/x^2
 + 3*x^2 - 8*x + 12)
 > #logs;
 0
+>
+> f := 6*x^5 - 4*x^4 - 32*x^3 + 12*x^2 + 34*x - 24;
+> g := x^6 - 8*x^4 + 17*x^2 - 8;
+> int, logs := RationalIntegral(f/g);
+> ReadableRationalIntegral(int, logs);
+a*log(x^3 + (a - 1)*x^2 - 3*x - 2*a + 2) + (-a + 2)*log(x^3 + (-a + 1)*x^2 - 3*x
++ 2*a - 2) where a has minimal polynomial x^2 - 2*x - 1
+> UnsetLogFile();
 ```

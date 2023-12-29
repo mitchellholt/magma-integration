@@ -7,7 +7,6 @@ function UnsafeRothsteinTrager(f, g: Label := "")
     b := MultivariatePolynomial(PP, g, 1);
 
     r := UnivariatePolynomial(Resultant(a - PP.2 * Derivative(b, PP.1), b, PP.1));
-    printf "ROTH num: %o, denom %o, res: %o", f, g, r;
     F, roots := SplittingField(r: Abs := true, Opt := true);
     G := ChangeRing(PolynomialRing(K), F);
 
