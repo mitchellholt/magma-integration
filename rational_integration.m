@@ -10,7 +10,7 @@ function UnsafeRothsteinTrager(f, g)
     F, roots := SplittingField(r: Abs := true, Opt := true); // can we name the algebraic extensions?
     // Would be nice if x was replaced with the label of the indeterminant
     // in the input
-    P<x>, hom := ChangeRing(PolynomialRing(K), F);
+    _, hom := ChangeRing(PolynomialRing(K), F);
 
     return [<c, GCD(hom(f) - c * hom(Derivative(g)), hom(g))> : c in roots], F;
 end function;
@@ -47,10 +47,10 @@ end function;
 
 
 function LogarithmicExtensionWithLabels(F, logarithm_arg)
-    G := LogarithmicFieldExtension(
+    L := LogarithmicFieldExtension(
             F, F ! (Derivative(logarithm_arg) / logarithm_arg));
-    AssignNames(~G, [Sprintf("log(%o)", logarithm_arg)]);
-    return G;
+    AssignNames(~L, [Sprintf("log(%o)", logarithm_arg)]);
+    return L;
 end function;
 
 
@@ -84,13 +84,14 @@ intrinsic RationalIntegral(f :: RngDiffElt, F :: RngDiff) -> RngDiffElt, RngDiff
     // fast simplification; works assuming gcd(num, denom) = 1
     poly_part, num := Quotrem(num, denom);
 
-    rational_part := elt< R | Integral(poly_part), 1>;
-    logarithmic_part := F ! 0;
     // G will to be final diff field, hm always homomorphism F to (current) G
     G, hm := ConstantExtensionWithLabels(F, ConstantField(F));
 
+    rational_part := elt< R | Integral(poly_part), 1>;
+    logarithmic_part := G ! 0;
+
     for term in SquarefreePartialFractionDecomposition(num/denom) do
-        tm := term; // t = <factor, power, numerator>, can't mutate term
+        tm := term; // tm = <factor, power, numerator>, can't mutate term
         while tm[2] gt 1 do
             // Hermite reduction step
             c, s, t := XGCD(tm[1], Derivative(tm[1]));
@@ -99,7 +100,7 @@ intrinsic RationalIntegral(f :: RngDiffElt, F :: RngDiff) -> RngDiffElt, RngDiff
             tm[2] -:= 1;
         end while;
 
-        if (R ! tm[3] eq 0) then continue; end if;
+        if (tm[3] eq 0) then continue; end if;
 
         logs, ConstFld := UnsafeRothsteinTrager(tm[3], tm[1]);
 
@@ -111,12 +112,10 @@ intrinsic RationalIntegral(f :: RngDiffElt, F :: RngDiff) -> RngDiffElt, RngDiff
                     F, Compositum(ConstantField(G), ConstFld));
         end if; // last case is ConstFld = Q, so nothing to do there
 
-        logarithmic_part := G ! logarithmic_part;
-
         // add necessary logarithmic extensions
         for log in logs do // log is <constant, arg> pair
             G := LogarithmicExtensionWithLabels(G, log[2]);
-            logarithmic_part +:= log[1]*G.1;
+            logarithmic_part := (G ! logarithmic_part) + (G ! log[1])*G.1;
         end for;
 
     end for;
