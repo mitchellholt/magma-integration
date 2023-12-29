@@ -25,10 +25,8 @@ intrinsic RothsteinTrager(num :: RngUPolElt, denom :: RngUPolElt) -> SeqEnum
     // theorem are met.
     require denom ne 0 : "Denominator is the zero polynomial";
     require num ne 0 : "Input must be non-zero";
-    require IsField(BaseRing(num)) and IsField(BaseRing(denom))
-        : "inputs must come from a field";
-    require Parent(num) eq Parent(denom)
-        : "Polynomials must come from the same field";
+    require IsField(BaseRing(num)) and Parent(num) cmpeq Parent(denom)
+        : "inputs must come from the same field";
     require Degree(num) lt Degree(denom)
         : "Degree of argument 1 must be less than degree argument 2";
     require GCD(num, denom) eq 1: "Polynomials must be coprime";
@@ -47,10 +45,6 @@ end function;
 
 
 function LogarithmicExtensionWithLabels(F, logarithm_arg)
-    L := LogarithmicFieldExtension(
-            F, F ! (Derivative(logarithm_arg) / logarithm_arg));
-    AssignNames(~L, [Sprintf("log(%o)", logarithm_arg)]);
-    return L;
 end function;
 
 
@@ -68,14 +62,14 @@ intrinsic RationalIntegral(f :: RngDiffElt) -> RngDiffElt
 }
     require IsAlgebraicDifferentialField(Parent(f))
         : "Input must be an algebraic differential field";
-    // not sure if this is sufficient for Parent(f) to be finite algebraic over
-    // Q, need to test
-    require Type(BaseRing(ConstantField(Parent(f)))) eq FldRat
+
+    F := Parent(f);
+
+    require Type(BaseRing(ConstantField(F))) eq FldRat
         : "Constant field is not a finite extension of Q";
 
     if f eq 0 then return f; end if;
 
-    F := Parent(f);
     // bit of a hack, shouldn't need to do this in logarithmic or exponential
     // cases, fingers crossed we can just use Eltseq there. Note that R always
     // has a different variable name to F, this is really annoying
@@ -87,7 +81,7 @@ intrinsic RationalIntegral(f :: RngDiffElt) -> RngDiffElt
     poly_part, num := Quotrem(num, denom);
 
     rational_part := elt< R | Integral(poly_part), 1>;
-    logarithmic_part := F ! 0;
+    all_logs := [];
 
     for term in SquarefreePartialFractionDecomposition(num/denom) do
         // Hermite reduction step
@@ -110,12 +104,16 @@ intrinsic RationalIntegral(f :: RngDiffElt) -> RngDiffElt
             F := ConstantExtensionWithLabels(F, Compositum(ConstantField(F), C));
         end if; // last case is C = Q, so nothing to do there
 
-        // add necessary logarithmic extensions
-        for log in logs do // log is <constant, arg> pair
-            F := LogarithmicExtensionWithLabels(F, log[2]); // F.1 is new log
-            logarithmic_part := (F ! logarithmic_part) + (F ! log[1])*F.1;
-        end for;
-
+        // add logs to list for now
+        all_logs cat:= logs;
     end for;
-    return logarithmic_part + (F ! rational_part);
+
+    // do the logarithmic extension
+    P := PolynomialRing(F, #all_logs);
+    log_derivs := [Derivative(F ! l[2])/(F ! l[2]) : l in all_logs];
+    L := DifferentialFieldExtension(ChangeUniverse(log_derivs, P));
+    // AssignNames(~L, [Sprintf("log(%o)", l[2]) : l in all_logs]);
+
+    return (L ! rational_part) + &+[L.i * (L ! all_logs[i][1]) : i in [1 .. #all_logs]],
+        [l[2] : l in all_logs];
 end intrinsic;

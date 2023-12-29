@@ -3,8 +3,13 @@
 Example:
 ```
 > F<x> := RationalDifferentialField(RationalField());
-> f := 3*x^5 - 2*x^4 - x^3 + 2*x^2 - 2*x + 2;
-> g := x^6 - x^5 + x^4 - x^3;
-> RationalIntegral(f/g);
-log(x^3 - x^2 + x - 1) + 1/x^2
+> f := 2*x + 1;
+> g := x^2 - 2;
+> integral, logs := RationalIntegral(f/g);
+> L := Parent(integral);
+> K := ConstantField(L);
+> AssignNames(~K, ["a"]);
+> AssignNames(~L, [Sprintf("log(%o)", arg) : arg in logs]);
+> integral;
+1/4*(a + 4)*log(x - a) + 1/4*(-a + 4)*log(x + a)
 ```
