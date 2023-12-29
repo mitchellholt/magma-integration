@@ -7,6 +7,7 @@ function UnsafeRothsteinTrager(f, g: Label := "")
     b := MultivariatePolynomial(PP, g, 1);
 
     r := UnivariatePolynomial(Resultant(a - PP.2 * Derivative(b, PP.1), b, PP.1));
+    printf "ROTH num: %o, denom %o, res: %o", f, g, r;
     F, roots := SplittingField(r: Abs := true, Opt := true);
     G := ChangeRing(PolynomialRing(K), F);
 
@@ -48,10 +49,11 @@ function LogarithmicExtensionWithLabels(F, logarithm_arg)
 end function;
 
 
-intrinsic RationalIntegral(f :: RngDiffElt) -> RngDiffElt
+intrinsic RationalIntegral(f :: RngDiffElt) -> RngDiffElt, SeqEnum
 {
     Integrate the given rational function using Hermite's method and
-    Rothstein-Trager.
+    Rothstein-Trager. Return the integral and the arguments to every logarithm
+    used (for naming purposes).
 
     This function assumes that:
         - Every rational function is always represented such that the numerator
@@ -87,9 +89,11 @@ intrinsic RationalIntegral(f :: RngDiffElt) -> RngDiffElt
         // Hermite reduction step
         tm := term; // tm = <factor, power, numerator>, can't mutate term
         while tm[2] gt 1 do
-            c, s, t := XGCD(tm[1], Derivative(tm[1]));
-            rational_part +:= elt< R | (-tm[3] * t) / (tm[2] - 1), tm[1]^(tm[2] - 1)>;
-            tm[3] *:= s + (Derivative(t) / (tm[2] - 1));
+            _, s, t := XGCD(tm[1], Derivative(tm[1]));
+            s *:= tm[3];
+            t *:= tm[3];
+            rational_part +:= elt< R | -t/(tm[2] - 1), tm[1]^(tm[2] - 1)>;
+            tm[3] := s + (Derivative(t) / (tm[2] - 1));
             tm[2] -:= 1;
         end while;
 
@@ -108,12 +112,29 @@ intrinsic RationalIntegral(f :: RngDiffElt) -> RngDiffElt
         all_logs cat:= logs;
     end for;
 
-    // do the logarithmic extension
+    if #all_logs eq 0 then return F ! rational_part, all_logs; end if;
+
     P := PolynomialRing(F, #all_logs);
     log_derivs := [Derivative(F ! l[2])/(F ! l[2]) : l in all_logs];
     L := DifferentialFieldExtension(ChangeUniverse(log_derivs, P));
-    // AssignNames(~L, [Sprintf("log(%o)", l[2]) : l in all_logs]);
 
     return (L ! rational_part) + &+[L.i * (L ! all_logs[i][1]) : i in [1 .. #all_logs]],
         [l[2] : l in all_logs];
 end intrinsic;
+
+
+intrinsic ReadableRationalIntegral(int :: RngDiffElt, logs :: SeqEnum) -> MonStgElt
+{ Return a readable string representation of a rational int. }
+    if #logs eq 0 then return Sprint(int); end if;
+    L := Parent(int);
+    K := ConstantField(L);
+    if Type(K) eq FldNum then
+        AssignNames(~K, ["a"]);
+        AssignNames(~L, [Sprintf("log(%o)", arg) : arg in logs]);
+        return Sprintf("%o where a has minimal polynomial %o",
+                int, DefiningPolynomial(K));
+    else
+        AssignNames(~L, [Sprintf("log(%o)", arg) : arg in logs]);
+        return Sprint(int);
+    end if;
+end intrinsic
