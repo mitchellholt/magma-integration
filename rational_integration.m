@@ -1,4 +1,4 @@
-function UnsafeRothsteinTrager(f, g)
+function UnsafeRothsteinTrager(f, g: Label := "")
     K := BaseRing(f);
     PP := PolynomialRing(K, 2);
 
@@ -9,6 +9,8 @@ function UnsafeRothsteinTrager(f, g)
     r := UnivariatePolynomial(Resultant(a - PP.2 * Derivative(b, PP.1), b, PP.1));
     F, roots := SplittingField(r: Abs := true, Opt := true);
     G := ChangeRing(PolynomialRing(K), F);
+
+    if #Label gt 0 then AssignNames(~G, [Label]); end if; // sensible printing
 
     return [<c, GCD((G ! f) - c * (G !(Derivative(g))), (G ! g))> : c in roots];
 end function;
@@ -75,7 +77,8 @@ intrinsic RationalIntegral(f :: RngDiffElt) -> RngDiffElt
 
     F := Parent(f);
     // bit of a hack, shouldn't need to do this in logarithmic or exponential
-    // cases, fingers crossed we can just use Eltseq there.
+    // cases, fingers crossed we can just use Eltseq there. Note that R always
+    // has a different variable name to F, this is really annoying
     R := RationalFunctionField(ConstantField(F));
     num := Numerator(R ! f);
     denom := Denominator(R ! f);
@@ -97,8 +100,8 @@ intrinsic RationalIntegral(f :: RngDiffElt) -> RngDiffElt
         end while;
 
         if (tm[3] eq 0) then continue; end if;
-        logs := UnsafeRothsteinTrager(tm[3], tm[1]); // note logs is non-empty
-        C := Parent(logs[1][1]);
+        logs := UnsafeRothsteinTrager(tm[3], tm[1]: Label := Sprint(F.1));
+        C := Parent(logs[1][1]); // note logs is non-empty
 
         // expand constant field of F as needed
         if Type(ConstantField(F)) ne FldNum then // no alg. extensions
