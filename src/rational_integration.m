@@ -1,4 +1,4 @@
-function UnsafeRothsteinTrager(f, g: Label := "")
+function UnsafeRothsteinTrager(f, g: Label := "", log_progress := false)
     K := BaseRing(f);
     PP := PolynomialRing(K, 2);
 
@@ -7,7 +7,13 @@ function UnsafeRothsteinTrager(f, g: Label := "")
     b := MultivariatePolynomial(PP, g, 1);
 
     r := UnivariatePolynomial(Resultant(a - PP.2 * Derivative(b, PP.1), b, PP.1));
+    if log_progress then
+        printf "Res is %o", r;
+    end if;
     F, roots := SplittingField(r: Abs := true, Opt := true);
+    if log_progress then
+        printf "Splitting field defined by %o", DefiningPolynomial(F);
+    end if;
     G := ChangeRing(PolynomialRing(K), F);
 
     if #Label gt 0 then AssignNames(~G, [Label]); end if; // sensible printing
@@ -114,7 +120,7 @@ intrinsic RationalIntegral(f :: RngDiffElt) -> RngDiffElt, SeqEnum
     if #all_logs eq 0 then return F ! rational_part, all_logs; end if;
 
     P := PolynomialRing(F, #all_logs);
-    log_derivs := [Derivative(F ! l[2])/(F ! l[2]) : l in all_logs];
+    log_derivs := [Derivative(F ! log[2])/(F ! log[2]) : log in all_logs];
     L := DifferentialFieldExtension(ChangeUniverse(log_derivs, P));
 
     return (L ! rational_part) + &+[L.i * (L ! all_logs[i][1]) : i in [1 .. #all_logs]],
@@ -136,4 +142,4 @@ intrinsic ReadableRationalIntegral(int :: RngDiffElt, logs :: SeqEnum) -> MonStg
         AssignNames(~L, [Sprintf("log(%o)", arg) : arg in logs]);
         return Sprint(int);
     end if;
-end intrinsic
+end intrinsic;
