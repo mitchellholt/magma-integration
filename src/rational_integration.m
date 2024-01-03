@@ -124,7 +124,7 @@ intrinsic RationalIntegral(f :: RngDiffElt) -> RngDiffElt, SeqEnum
     L := DifferentialFieldExtension(ChangeUniverse(log_derivs, P));
 
     return (L ! rational_part) + &+[L.i * (L ! all_logs[i][1]) : i in [1 .. #all_logs]],
-        [l[2] : l in all_logs];
+        [log[2] : log in all_logs];
 end intrinsic;
 
 
@@ -142,4 +142,114 @@ intrinsic ReadableRationalIntegral(int :: RngDiffElt, logs :: SeqEnum) -> MonStg
         AssignNames(~L, [Sprintf("log(%o)", arg) : arg in logs]);
         return Sprint(int);
     end if;
+end intrinsic;
+
+
+intrinsic RationalIntegral(f :: DiffFieldElt) -> DiffFieldElt
+{
+    Integrate the given rational function using Hermite's method and
+    Rothstein-Trager.
+
+    All algorithms here are taked from Algorithms for Computer Algebra
+    (Geddes et al)
+}
+    F := Parent(f);
+    require #Monomials(F) eq 0 : "Input is not rational function";
+
+    if f eq 0 then return f; end if;
+
+    ply := AsFraction(f);
+    R := Parent(ply);
+    num := Numerator(ply);
+    denom := Denominator(ply);
+
+    // fast simplification; works assuming gcd(num, denom) = 1
+    poly_part, num := Quotrem(num, denom);
+
+    rational_part := R ! Integral(poly_part);
+    log_part := F ! 0;
+
+    for term in SquarefreePartialFractionDecomposition(num/denom) do
+        // Hermite reduction step
+        tm := term; // tm = <factor, power, numerator>, can't mutate term
+        while tm[2] gt 1 do
+            _, s, t := XGCD(tm[1], Derivative(tm[1]));
+            s *:= tm[3];
+            t *:= tm[3];
+            rational_part +:= elt< R | -t/(tm[2] - 1), tm[1]^(tm[2] - 1)>;
+            tm[3] := s + (Derivative(t) / (tm[2] - 1));
+            tm[2] -:= 1;
+        end while;
+
+        if (tm[3] eq 0) then continue; end if; // integral is rational
+
+        logs := UnsafeRothsteinTrager(tm[3], tm[1]);
+        C := Parent(logs[1][1]); // note logs is non-empty
+
+        K := ConstantField(F);
+        if Type(K) ne FldNum then // no alg. extensions
+            F := ExtendConstantField(F, C); // might be trivial
+        elif Type(C) eq FldNum then // both K, C have alg. exts.
+            F := ExtendConstantField(F, Compositum(K, C));
+        end if; // last case is C = K = Q, so nothing to do there
+
+        for log in logs do
+            F, hm := MonomialExtension(F,
+                    [ MonomialArgument("log", BaseField(F) ! log[2]) ]:
+                    fix_err := true);
+            log_part := F ! hm(log_part) + (F ! log[1]) * LastGenerator(F);
+        end for;
+    end for;
+
+    return (F ! rational_part) + log_part;
+end intrinsic;
+
+
+intrinsic IntegrateAssignNames(f :: DiffFieldElt:
+                        integral := 0,
+                        algebraic_number_name := "a") -> DiffFieldElt
+{
+    Integrate the input, but allow reasonable default names to be assigned to
+    all related structures, preserving existing user-defined names wherever
+    possible. Return the integral.
+
+    Optional parameters.
+        integral: the already calculated integral. 0 is taken as a null value
+            (if the input has integral 0, recomputing is assumed to have
+             negligible cost).
+        algebraic_number_name: the name to be assigned to the algebraic number
+            (which may be) used to express the integral. If the constant field
+            of the integral is the same as that of the input, then any existing
+            names are used.
+}
+    if integral eq 0 then
+        integral := RationalIntegral(f);
+    end if;
+
+    F := Parent(f);
+    FF := Parent(integral);
+    K := ConstantField(F);
+    KK := ConstantField(FF);
+
+    if Type(KK) eq FldNum then
+        if KK eq K or DefiningPolynomial(KK) eq DefiningPolynomial(K) then
+            name := Sprint(Name(K, 1));
+            if name[1] ne "$" then
+                algebraic_number_name := name;
+            end if;
+        end if;
+        AssignNames(~KK, [ algebraic_number_name ]);
+    end if;
+
+    // Assign the BaseField generator name
+    G := BaseField(FF);
+    AssignNames(~G, [ Sprint(Name(BaseField(F), 1)) ]);
+
+    // Assign default names to all the monomials
+    monomials := Monomials(FF);
+    if #monomials gt 0 then
+        AssignNames(~FF, [ Sprint(m) : m in monomials ]);
+    end if;
+
+    return integral;
 end intrinsic;
