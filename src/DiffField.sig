@@ -2,8 +2,9 @@
 T,MonArg,-,0
 A,MonArg,2,ExtensionType,Argument
 S,MonomialArgument,"Create a monomial to be used as an extension over the parent of the argument. extType must be one of the string literals ""exp"" or ""log""",0,2,0,0,0,0,0,0,0,194,,0,0,298,,MonArg,-38,-38,-38,-38,-38
-S,MonomialType,Return the type of the monomial,0,1,0,0,0,0,0,0,0,MonArg,,298,-38,-38,-38,-38,-38
 S,MonomialArg,Return the argument of the monomial,0,1,0,0,0,0,0,0,0,MonArg,,194,-38,-38,-38,-38,-38
+S,IsLogarithmic,Return whether m is a logarithmic (or primitive) monomial,0,1,0,0,0,0,0,0,0,MonArg,,36,-38,-38,-38,-38,-38
+S,IsExponential,Return whether m is an exponential monomial,0,1,0,0,0,0,0,0,0,MonArg,,36,-38,-38,-38,-38,-38
 S,ChangeUnderlyingField,Change the underlying field the argument to this monomial comes from,0,2,0,0,0,0,0,0,0,193,,0,0,MonArg,,MonArg,-38,-38,-38,-38,-38
 S,Print,Print m,0,1,0,0,1,0,0,0,0,MonArg,,-38,-38,-38,-38,-38,-38
 S,AllTranscendental,"Use the Risch Structure Theorem to check if the given tower of monomials are indeed transcendental over their base field. Returns the first monomial which is not transcendental and an offending linear/ product combination. If no such monomial exists, return the empty tuple",1,0,1,82,0,MonArg,1,0,0,0,0,0,0,0,82,,303,-38,-38,-38,-38,-38
@@ -14,12 +15,15 @@ S,Monomials,Return the monomials generating this field,0,1,0,0,0,0,0,0,0,DiffFie
 S,Generators,Return the generators of the differential field,0,1,0,0,0,0,0,0,0,DiffField,,83,-38,-38,-38,-38,-38
 S,ConstantField,Return the constant field of F,0,1,0,0,0,0,0,0,0,DiffField,,-24,-38,-38,-38,-38,-38
 S,BaseField,Return the base field of F,0,1,0,0,0,0,0,0,0,DiffField,,-44,-38,-38,-38,-38,-38
+S,RationalField,Return the underlying rational function field,0,1,0,0,0,0,0,0,0,DiffField,,DiffField,-38,-38,-38,-38,-38
 S,ExtendConstantField,"Return a new differential field, with the constant field extended to C",0,2,0,0,0,0,0,0,0,-24,,0,0,DiffField,,DiffField,-38,-38,-38,-38,-38
 S,MonomialExtension,"Return a new differential field which has the monomial extensions of the given differential field as well as the new monomial extensions. If fix_err is true, do not error when some new monomial is not transcendental. Instead, simply remove the monomial from the sequence",1,1,1,82,0,MonArg,2,0,0,0,0,0,0,0,82,,0,0,DiffField,,DiffField,175,-38,-38,-38,-38
 S,Print,Print F,0,1,0,0,1,0,0,0,0,DiffField,,-38,-38,-38,-38,-38,-38
 S,AssignNames,Assign names to the generators of the differential field,1,1,1,82,0,298,2,0,0,1,0,0,0,0,82,,1,1,DiffField,,-38,-38,-38,-38,-38,-38
 S,.,Return the ith generator of F,0,2,0,0,0,0,0,0,0,148,,0,0,DiffField,,DiffFieldElt,-38,-38,-38,-38,-38
 S,LastGenerator,Return the final generator of F,0,1,0,0,0,0,0,0,0,DiffField,,DiffFieldElt,-38,-38,-38,-38,-38
+S,Subfield,"Let F = K(x, M1, ..., Mi, ..., Mn). Return K(x, M1, ..., M(i - 1), M(i + 1), ..., Mn)",0,2,0,0,0,0,0,0,0,148,,0,0,DiffField,,DiffField,-38,-38,-38,-38,-38
+S,Polynomial,"Let F be the parent of f with F = K(x, M1, ..., Mi, ..., Mn). Attempt to write f as a polynomial p in K(x, M1, ..., M(i - 1), M(i + 1), ..., Mn)[Mi]. If this is possible, return p and the inclusion map from Parent(p) to F. Otherwise, throw a runtime error",0,2,0,0,0,0,0,0,0,148,,0,0,DiffFieldElt,,312,175,-38,-38,-38,-38
 S,eq,Return if F eq G,0,2,0,0,0,0,0,0,0,DiffField,,0,0,DiffField,,36,-38,-38,-38,-38,-38
 S,cmpeq,Return if F cmpeq G,0,2,0,0,0,0,0,0,0,DiffField,,0,0,DiffField,,36,-38,-38,-38,-38,-38
 A,DiffFieldElt,2,Parent,ActualRngDiffElt

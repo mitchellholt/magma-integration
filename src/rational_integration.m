@@ -24,7 +24,7 @@ end function;
 
 intrinsic RothsteinTrager(num :: RngUPolElt, denom :: RngUPolElt) -> SeqEnum
 {
-    Perform the Rothstein-Trager algorithm on the numerate, denominator input.
+    Perform the Rothstein-Trager algorithm on the numerator, denominator input.
     Return a list of <constant, logarithm argument> pairs.
 }
     // verify that the input is well-formed and that the conditions of the
@@ -36,8 +36,8 @@ intrinsic RothsteinTrager(num :: RngUPolElt, denom :: RngUPolElt) -> SeqEnum
     require Degree(num) lt Degree(denom)
         : "Degree of argument 1 must be less than degree argument 2";
     require GCD(num, denom) eq 1: "Polynomials must be coprime";
-    require LeadingCoefficient(denom) eq 1: "Argument 2 must be monic";
-    require IsSquarefree(denom): "Argument 2 must be squarefree";
+    require LeadingCoefficient(denom) eq 1: "Denominator must be monic";
+    require IsSquarefree(denom): "Denominator must be squarefree";
 
     return UnsafeRothsteinTrager(num, denom);
 end intrinsic;

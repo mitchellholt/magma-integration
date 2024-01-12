@@ -24,15 +24,21 @@ intrinsic MonomialArgument(extType :: MonStgElt, arg :: RngDiffElt) -> MonArg
 end intrinsic;
 
 
-intrinsic MonomialType(m :: MonArg) -> MonStgElt
-{ Return the type of the monomial }
-    return m`ExtensionType;
-end intrinsic;
-
-
 intrinsic MonomialArg(m :: MonArg) -> RngDiffElt
 { Return the argument of the monomial }
     return m`Argument;
+end intrinsic;
+
+
+intrinsic IsLogarithmic(m :: MonArg) -> BoolElt
+{ Return whether m is a logarithmic (or primitive) monomial }
+    return m`ExtensionType eq "log";
+end intrinsic;
+
+
+intrinsic IsExponential(m :: MonArg) -> BoolElt
+{ Return whether m is an exponential monomial }
+    return m`ExtensionType eq "exp";
 end intrinsic;
 
 
@@ -47,7 +53,7 @@ end intrinsic;
 intrinsic Print(m :: MonArg)
 { Print m}
     arg := m`Argument;
-    if m`ExtensionType eq "log" then
+    if IsLogarithmic(m) then
         printf "log(%o)", arg;
     else
         printf "exp(%o)", arg;
@@ -88,7 +94,7 @@ function UnsafeDiffField(baseField, monomials)
         derivs := [];
         for i in [ 1 .. #monomials ] do
             arg := baseField ! MonomialArg(monomials[i]);
-            if MonomialType(monomials[i]) eq "exp" then
+            if IsExponential(monomials[i]) then
                 derivs cat:= [ Derivative(arg) * P.i ];
             else
                 derivs cat:= [ Derivative(arg) / arg ];
@@ -140,6 +146,12 @@ intrinsic BaseField(F :: DiffField) -> Rng
     else
         return BaseField(F`ActualRngDiff);
     end if;
+end intrinsic;
+
+
+intrinsic RationalField(F :: DiffField) -> DiffField
+{ Return the underlying rational function field }
+    return F`UnderlyingRatFuncField;
 end intrinsic;
 
 
@@ -220,6 +232,45 @@ end intrinsic;
 intrinsic LastGenerator(F :: DiffField) -> DiffFieldElt
 { Return the final generator of F }
     return F.(#Generators(F));
+end intrinsic;
+
+intrinsic Subfield(F :: DiffField, i :: RngIntElt) -> DiffField
+{
+    Let F = K(x, M1, ..., Mi, ..., Mn).
+    Return K(x, M1, ..., M(i - 1), M(i + 1), ..., Mn).
+}
+    require i gt 0 : "Invalid index into the monomials";
+    monomials := Monomials(F);
+    n := #monomials;
+    require i le n : "The differential field deos not have enough monomials";
+    return UnsafeDiffField(BaseField(F),
+            [ monomials[j] : j in [1 .. n] | j ne i ]);
+end intrinsic;
+
+
+intrinsic Polynomial(f :: DiffFieldElt, i :: RngIntElt) -> RngUPolElt, Map
+{
+    Let F be the parent of f with F = K(x, M1, ..., Mi, ..., Mn). Attempt to
+    write f as a polynomial p in K(x, M1, ..., M(i - 1), M(i + 1), ..., Mn)[Mi].
+    If this is possible, return p and the inclusion map from Parent(p) to F.
+    Otherwise, throw a runtime error.
+}
+    F := Parent(f);
+    require i gt 0 : "Invalid index into the monomials";
+    require i le #Monomials(F)
+        : "The differential field deos not have enough monomials";
+
+    frac := AsFraction(f);
+    num := Polynomial(Coefficients(Numerator(frac), i));
+    den := Polynomial(Coefficients(Denominator(frac), i));
+    require Degree(den) eq 0 : "Input is not a polynomial in the last monomial";
+
+    BaseFld := Subfield(F, i);
+    P, plyhm := ChangeRing(Parent(num), RationalField(BaseFld));
+    R := RationalField(F);
+    coeffMap := map< RationalField(BaseFld) -> R | a :-> R!a>;
+    inclusion := hom< P -> R | coeffMap, R.i>;
+    return plyhm(num), map< P -> F | a :-> F ! inclusion(a) >;
 end intrinsic;
 
 
