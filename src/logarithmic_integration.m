@@ -1,18 +1,24 @@
-intrinsic IntegrateLogarithmicPolynomial(f :: DiffFieldElt) -> Bool, DiffFieldElt
+intrinsic IntegrateLogarithmicPolynomial(f :: DiffFieldElt: all_logarithms := [])
+    -> Bool, DiffFieldElt, SeqEnum
 {
-    In a DiffField K(x, M1, ..., Mn), assert that Mn is logarithmic and that
-    f is a polynomial in K(x, M1, ..., M(n-1))[Mn]. If f has an elementary
-    integral, return true and the integral. Otherwise, return false and an
-    uninitialised value.
+    In K(x, M1, ..., Mn), assert that Mn is logarithmic and that f is a
+    polynomial in K(x, M1, ..., M(n-1))[Mn]. If f has an elementary integral,
+    return true, the integral, and a list of all the logarithms appearing in the
+    integral. Otherwise, return false and two values which can be anything.
 }
     F := Parent(f);
-    monomials := Monomials(F);
-    n := #monomials;
-    require n gt 0 and IsLogarithmic(monomials[n])
-        : "The last monomial in the tower is not logarithmic";
 
-    p, inclusion := Polynomial(f, n); // throws if not poly
-    integral; // DO NOT ASSIGN TO THIS VALUE UNTIL THE END
+    require IsLogarithmic(F) : "The last generator is not logarithmic";
+    require Denominator(f) eq 1 : "Argument is not a polynomial";
+
+    // find all the logarithms, if no list has been provided
+    if #all_logarithms eq 0 then
+        all_logarithms := CheckLogarithms(F);
+    end if;
+
+    poly := Numerator(f);
+    if poly eq 0 then return true, poly, all_logarithms; end if;
+    integral; // value of an elementary integral, if any
     deriv := Derivative(F.n);
     deg := Degree(p);
     qs := [ Codomain(inclusion) | 0 : _ in [1 .. deg + 1] ];
