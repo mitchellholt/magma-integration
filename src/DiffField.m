@@ -270,7 +270,7 @@ intrinsic Polynomial(f :: DiffFieldElt, i :: RngIntElt) -> RngUPolElt, Map
     R := RationalField(F);
     coeffMap := map< RationalField(BaseFld) -> R | a :-> R!a>;
     inclusion := hom< P -> R | coeffMap, R.i>;
-    return plyhm(num), map< P -> F | a :-> F ! inclusion(a) >;
+    return plyhm(num/den), map< P -> F | a :-> F ! inclusion(a) >;
 end intrinsic;
 
 

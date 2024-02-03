@@ -1,3 +1,6 @@
+import "DifferentialFields.m" : AsFraction, TranscendentalLogarithmicExtension;
+
+
 function UnsafeRothsteinTrager(f, g: Label := "", log_progress := false)
     K := BaseRing(f);
     PP := PolynomialRing(K, 2);
@@ -50,11 +53,7 @@ function ConstantExtensionWithLabels(F, K)
 end function;
 
 
-function LogarithmicExtensionWithLabels(F, logarithm_arg)
-end function;
-
-
-intrinsic RationalIntegral(f :: RngDiffElt) -> RngDiffElt, SeqEnum
+intrinsic RationalIntegralOld(f :: RngDiffElt) -> RngDiffElt, SeqEnum
 {
     Integrate the given rational function using Hermite's method and
     Rothstein-Trager. Return the integral and the arguments to every logarithm
@@ -145,29 +144,33 @@ intrinsic ReadableRationalIntegral(int :: RngDiffElt, logs :: SeqEnum) -> MonStg
 end intrinsic;
 
 
-intrinsic RationalIntegral(f :: DiffFieldElt) -> DiffFieldElt
+intrinsic RationalIntegral(f :: RngDiffElt) -> RngDiffElt, SeqEnum
 {
     Integrate the given rational function using Hermite's method and
-    Rothstein-Trager.
+    Rothstein-Trager. Return the integral and all of the logarithms used.
 
     All algorithms here are taked from Algorithms for Computer Algebra
     (Geddes et al)
 }
     F := Parent(f);
-    require #Monomials(F) eq 0 : "Input is not rational function";
+    plyfrac := AsFraction(f);
+    R := Parent(plyfrac);
+
+    require Rank(R) eq 1 and CoefficientRing(R) eq ConstantField(F)
+        : "Argument is not a rational function"; // not sure if this will work?
 
     if f eq 0 then return f; end if;
 
-    ply := AsFraction(f);
-    R := Parent(ply);
-    num := Numerator(ply);
-    denom := Denominator(ply);
+    num := Numerator(plyfrac);
+    denom := Denominator(plyfrac);
 
     // fast simplification; works assuming gcd(num, denom) = 1
     poly_part, num := Quotrem(num, denom);
 
     rational_part := R ! Integral(poly_part);
     log_part := F ! 0;
+
+    all_logarithms := [F|]; // list of all logarithms used. Universe is always F
 
     for term in SquarefreePartialFractionDecomposition(num/denom) do
         // Hermite reduction step
@@ -184,24 +187,26 @@ intrinsic RationalIntegral(f :: DiffFieldElt) -> DiffFieldElt
         if (tm[3] eq 0) then continue; end if; // integral is rational
 
         logs := UnsafeRothsteinTrager(tm[3], tm[1]);
-        C := Parent(logs[1][1]); // note logs is non-empty
+        C := Parent(logs[1][1]); // note logs is always non-empty
 
         K := ConstantField(F);
-        if Type(K) ne FldNum then // no alg. extensions
-            F := ExtendConstantField(F, C); // might be trivial
+        if Type(K) ne FldNum then // no algebraic extensions
+            F := ConstantFieldExtension(F, C); // might be trivial
+            ChangeUniverse(~all_logarithms, F);
         elif Type(C) eq FldNum then // both K, C have alg. exts.
-            F := ExtendConstantField(F, Compositum(K, C));
+            F := ConstantFieldExtension(F, Compositum(K, C));
+            ChangeUniverse(~all_logarithms, F);
         end if; // last case is C = K = Q, so nothing to do there
 
-        for log in logs do
-            F, hm := MonomialExtension(F,
-                    [ MonomialArgument("log", BaseField(F) ! log[2]) ]:
-                    fix_err := true);
-            log_part := F ! hm(log_part) + (F ! log[1]) * LastGenerator(F);
+        for log in logs do // log is < constant, log argument > pair
+            F, all_logarithms := TranscendentalLogarithmicExtension(
+                    F, log[2]:
+                    err := false, logarithms := all_logarithms);
+            log_part := F ! log_part + (F ! log[1] * F.1);
         end for;
     end for;
 
-    return (F ! rational_part) + log_part;
+    return (F ! rational_part) + log_part, all_logarithms;
 end intrinsic;
 
 
