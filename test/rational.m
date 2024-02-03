@@ -1,5 +1,3 @@
-import "src/rational_integration.m" : RationalIntegral;
-
 F<x> := RationalDifferentialField(RationalField());
 
 f := 2*x + 1;
@@ -22,3 +20,5 @@ g := x^6 - 8*x^4 + 17*x^2 - 8;
 int, logs := RationalIntegral(f/g);
 integral := RationalIntegral(f/g);
 assert Derivative(integral) eq Parent(integral) ! (f/g);
+
+print "Passed all tests";

@@ -1,6 +1,3 @@
-import "DifferentialFields.m" : AsFraction, TranscendentalLogarithmicExtension;
-
-
 function UnsafeRothsteinTrager(f, g: dbg := false)
     K := BaseRing(f);
     PP := PolynomialRing(K, 2);
@@ -100,7 +97,7 @@ intrinsic RationalIntegral(f :: RngDiffElt) -> RngDiffElt, SeqEnum
 
         for log in logs do // log is < constant, log argument > pair
             F, all_logarithms := TranscendentalLogarithmicExtension(
-                    F, log[2]:
+                    F, F ! log[2]:
                     err := false, logarithms := all_logarithms);
             log_part := F ! log_part + (F ! log[1] * F.1);
         end for;

@@ -1,7 +1,7 @@
 intrinsic AsFraction(f :: RngDiffElt) -> FldFunRatElt
 {
     Assume the argument is from a field of the form L = F(x) for some
-    differential field F. Return the argument as an element of the rational
+    differntial field F. Return the argument as an element of the rational
     function field F(x).
 }
     F := Parent(f);
@@ -11,7 +11,15 @@ intrinsic AsFraction(f :: RngDiffElt) -> FldFunRatElt
         : "The argument must come from a differential ring that can be coerced \
         into a field.";
 
-    return RationalFunctionField(R) ! f;
+    // This happens when F is a differential field. For some reason it works
+    // here, so we don't even need to call AsFraction, can just use numerator
+    // and denominator on f
+    if Type(R) eq FldFunRat then return R ! f; end if;
+
+    // hopefully don't need to create a homormophism as well?
+    // AAAH why is this necessary?? It is only in the case of F(x) that this is
+    // necessary
+    return RationalFunctionField(BaseRing(R)) ! f;
 end intrinsic;
 
 
