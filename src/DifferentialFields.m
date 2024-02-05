@@ -1,3 +1,8 @@
+function IsPolyFractionField(F)
+    return not ISA(Type(UnderlyingRing(F)), FldFunRat);
+end function;
+
+
 intrinsic AsFraction(f :: RngDiffElt) -> FldFunRatElt
 {
     Assume the argument is from a field of the form L = F(x) for some
@@ -50,9 +55,16 @@ end intrinsic;
 
 
 intrinsic AllLogarithms(F :: RngDiff) -> SeqEnum
-{ Give a list of all of the logarithmic generators of F }
-    // TODO!
-    return [];
+{ Give an ordered sequence of all of the logarithmic generators of F. }
+    logarithms := [F|];
+    while not IsPolyFractionField(F) do
+        if IsLogarithmic(F) then
+            Append(~logarithms, F.1);
+        end if;
+        F := CoefficientRing(F);
+    end while;
+    Reverse(~logarithms);
+    return logarithms;
 end intrinsic;
 
 
@@ -60,37 +72,55 @@ intrinsic IsTranscendentalLogarithm(new :: RngDiffElt, logarithms :: SeqEnum) ->
 {
     Given a potential new logarithm argument to be put over a differential field,
     use the Risch Structure Theorem to check if the new logarithm is
-    transcendental. If not, return the product combination in the differetial
-    field equal to the new argument.
+    transcendental. If it is, return the empty sequence. If not, return the
+    product combination as a list of < factor, non-zero power > pairs in the
+    differetial field equal to the new argument.
 
-    Assume that logarithms is an algebraically independent set over its
-    universe.
+    Assume that [log(f) : f in logarithms] is an algebraically independent set
+    over Universe(logarithms). Also assume that each f in logarithms is
+    non-constant.
 }
-    // TODO!
-    return [];
+    F := Universe(logarithms);
+    require ISA(Type(F), RngDiff) and IsField(F)
+        : "logarithms do not come from a differential field";
+    // logarithms U {1, x} 1 is a basis for the ConstantField(F)-subfield of F
+    // containing primitive elementary functions.
+
+    // TODO use Risch to set up a linear system, solve with IsConsistent and
+    // check that the system is not consistent or has solution 0.
+    // For now, just check that new not in logarithms rip
+    if new in logarithms then
+        return [ F | < new, 1 > ];
+    else
+        return [F|];
+    end if;
 end intrinsic;
 
 
 intrinsic TranscendentalLogarithmicExtension(F :: RngDiff, f :: RngDiffElt:
-        logarithms := []) -> RngDiff, SeqEnum
+        logarithms := []) -> RngDiff, SeqEnum, RngDiffElt
 {
     Compute the differential extension field F(L), where L is logarithmic over
     F with derivative f'/f. If L is not transcendental, remove it. Otherwise
-    return F(L). Also return all of the logarithms of F(L).
+    return F(L). Also return all of the logarithms of F(L) and the
+    representation of L inside of F(L) (which may be a transcendental over F or
+    an element of F)
 }
+    require Derivative(f) ne 0 : "Constants must not be transcendental over Q";
     require Parent(f) cmpeq F
         : "Argument to be given to the new logarithm does not belong to the \
         given differential field";
-    require Derivative(f) ne 0 : "Argument cannot be constant";
 
     if #logarithms eq 0 then
         logarithms := AllLogarithms(F);
     end if;
 
-    assert Universe(logarithms) eq F;
+    require Universe(logarithms) eq F
+        : "universe of logarithms is not the input field";
 
-    if not IsTranscendentalLogarithm(f, logarithms) then
-        return F, logarithms;
+    prod_comb := IsTranscendentalLogarithm(f, logarithms);
+    if #prod_comb gt 0 then
+        return F, logarithms, F ! &*[ tm[1]^tm[2] : tm in prod_comb ];
     end if;
 
     fld := LogarithmicFieldExtension(F, Derivative(f)/f);
@@ -100,5 +130,5 @@ intrinsic TranscendentalLogarithmicExtension(F :: RngDiff, f :: RngDiffElt:
     // all arguments are copied, so we own logarithms.
     ChangeUniverse(~logarithms, fld);
     Append(~logarithms, f);
-    return fld, logarithms;
+    return fld, logarithms, fld.1;
 end intrinsic;

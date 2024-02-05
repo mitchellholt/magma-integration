@@ -96,10 +96,10 @@ intrinsic RationalIntegral(f :: RngDiffElt) -> RngDiffElt, SeqEnum
         end if; // last case is C = K = Q, so nothing to do there
 
         for log in logs do // log is < constant, log argument > pair
-            F, all_logarithms := TranscendentalLogarithmicExtension(
+            F, all_logarithms, log_rep := TranscendentalLogarithmicExtension(
                     F, F ! log[2]:
                     err := false, logarithms := all_logarithms);
-            log_part := F ! log_part + (F ! log[1] * F.1);
+            log_part := F ! log_part + (F ! log[1] * log_rep);
         end for;
     end for;
 
