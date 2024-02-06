@@ -1,3 +1,49 @@
+intrinsic LogarithmicRothsteinTrager(
+        num :: RngUPolElt,
+        denom :: RngUPolElt,
+        inclusion :: Map) -> BoolElt, SeqEnum
+{
+    Use the logarithmic Rothstein-Trager theorem to find if inclusion(num/denom)
+    has an elementary integral. If it does, return true and an elementary
+    integral (represented as a sequence of < coefficient, logarithm > pairs).
+    Otherwise, return false.
+}
+    P := Parent(num);
+
+    require P eq Parent(denom) and denom ne 0
+        : "Bad inputs";
+    require GCD(num, denom) eq 1 and Degree(num) lt Degree(denom)
+        : "Inputs do not satisfy the assumptions for Rothstein-Trager";
+
+    F := Codomain(inclusion);
+
+    require Domain(inclusion) eq P and ISA(Type(F), RngDiff)
+        : "inclusion map has incorrect domain or codomain";
+
+    _, denom_derivative := IsPolynomial(Derivative(inclusion(b)));
+
+    integral_sequence := [];
+    PP := PolynomialRing(CoefficientRing(P), 2);
+
+    a := MultivariatePolynomial(PP, num, 1);
+    b := MultivariatePolynomial(PP, denom, 1);
+    b_derivative := MultivariatePolynomial(PP, denom_derivative, 1);
+
+    r := UnivariatePolynomial(Resultant(a - PP.2 * b_derivative, b, PP.1));
+
+    // Integral is elementary iff r/lc has constant coefficients
+    lc := LeadingCoefficient(r);
+    for coeff in Coefficients(r) do
+        if Derivative(inclusion(coeff/lc)) ne 0 then
+            return false, integral_sequence;
+        end if;
+    end for;
+
+    G, roots := SplittingField(r: Abs := true, Opt := true);
+    Q := ChangeRing(P, G);
+    return true, [ < c, GCD(Q!num - c * Q!denom_derivative, Q!denom) > : c in roots ];
+end intrinsic;
+
 intrinsic IntegrateLogarithmicPolynomial(f :: RngDiffElt: all_logarithms := [])
     -> BoolElt, RngDiffElt, SeqEnum
 {
@@ -6,6 +52,7 @@ intrinsic IntegrateLogarithmicPolynomial(f :: RngDiffElt: all_logarithms := [])
     return true, an integral, and a list of all the logarithms appearing in the
     parent differential field of the solution. Otherwise, return false.
 }
+    // TODO supply all_logarithms to ElementaryIntegral to speed up
     // See working from 06/02/2024 in notebook for derivation of algorithm
     F := Parent(f);
 
@@ -78,9 +125,8 @@ intrinsic IntegrateLogarithmicPolynomial(f :: RngDiffElt: all_logarithms := [])
     end if;
     integral *:= -1;
 
-    // I suspect that F.1 cannot appear here, but I'm not sure rip. Need to
-    // prove it.
-    // Also, F.1 cannot be included in the argument to any log
+    // F.1 can appear as a log in G, but cannot be included in the argument to
+    // new any log. TODO Need to fix this because it dodges Risch atm
     G := Parent(integral);
     if not IsCoercible(G, F.1) then
         G := LogarithmicFieldExtension(G, G ! Derivative(F.1));
@@ -99,6 +145,5 @@ end intrinsic;
 intrinsic LogarithmicIntegral(f :: RngDiffElt: all_logarithms := []) -> BoolElt, RngDiffElt, SeqEnum
 { Integrate the given logarithmic function }
     // TODO hermite and Rothstein-Trager
-    print f, Parent(f);
     return IntegrateLogarithmicPolynomial(f: all_logarithms := all_logarithms);
 end intrinsic;
