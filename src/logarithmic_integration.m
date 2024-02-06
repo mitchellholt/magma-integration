@@ -52,7 +52,8 @@ intrinsic IntegrateLogarithmicPolynomial(f :: RngDiffElt: all_logarithms := [])
     // calculate the remaining non-zero terms
     i := deg - 1; // the index for q_i is i + 1 rip
     while i gt 0 do
-        is_elementary, integral, logs := ElementaryIntegral(PrevFld ! ps[i + 1]);
+        is_elementary, integral, logs := ElementaryIntegral(
+                PrevFld ! (ps[i + 1] + (i + 1)*qs[i + 2]*Derivative(F.1)));
         if not is_elementary then
             return false, integral, all_logarithms;
         elif #logs gt #all_logarithms then
@@ -67,20 +68,27 @@ intrinsic IntegrateLogarithmicPolynomial(f :: RngDiffElt: all_logarithms := [])
         end if;
         qs[i + 2] +:= -Coefficient(poly, 1)/(i + 1);
         qs[i + 1] := Coefficient(poly, 0);
+        i -:= 1;
     end while;
 
-    is_elementary, integral, logs := ElementaryIntegral(PrevFld ! ps[i + 1]);
+    is_elementary, integral, logs := ElementaryIntegral(
+                PrevFld ! (ps[1] + (1)*qs[i + 2]*Derivative(F.1)));
     if not is_elementary then
         return false, integral, all_logarithms;
     end if;
+    integral *:= -1;
 
+    // I suspect that F.1 cannot appear here, but I'm not sure rip. Need to
+    // prove it.
+    // Also, F.1 cannot be included in the argument to any log
     G := Parent(integral);
-    if G eq PrevFld then
-        G := F;
+    if not IsCoercible(G, F.1) then
+        G := LogarithmicFieldExtension(G, G ! Derivative(F.1));
+        ChangeUniverse(~logs, G);
+        Append(~logs, F.1);
     end if;
 
     for i in [ 0 .. deg + 1 ] do
-        print (qs[i + 1] * F.1^i);
         integral +:= G ! (qs[i + 1] * F.1^i);
     end for;
 
