@@ -56,7 +56,9 @@ intrinsic RationalIntegral(f :: RngDiffElt) -> RngDiffElt, SeqEnum
     require Rank(R) eq 1 and CoefficientRing(R) eq ConstantField(F)
         : "Argument is not a rational function"; // not sure if this will work?
 
-    if f eq 0 then return f; end if;
+    if f eq 0
+        then return f, [];
+    end if;
 
     num := Numerator(plyfrac);
     denom := Denominator(plyfrac);

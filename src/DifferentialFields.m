@@ -30,14 +30,13 @@ intrinsic AsFraction(f :: RngDiffElt) -> FldFunRatElt
 end intrinsic;
 
 
-intrinsic IsPolynomial(f :: RngDiffElt) -> Bool, RngUPolElt
+intrinsic IsPolynomial(f :: RngDiffElt) -> BoolElt, RngUPolElt
 {
     Return if the input is a polynomial over the first generator of the field.
     If it is, also return its representation as a polynomial.
 }
     frac := AsFraction(f);
-    poly;
-    if Denominator(f) ne 1 then return false, poly; end if;
+    if Denominator(f) ne 1 then return false, frac; end if;
     // If can't coerce poly into Parent(F), also return a homomorphism and
     // include note in report
     return true, UnivariatePolynomial(Numerator(f));
@@ -51,7 +50,7 @@ end intrinsic;
 ///////////////////////////////////////////////////////////////////////////////
 
 
-intrinsic IsLogarithmic(F :: RngDiff) -> Bool
+intrinsic IsLogarithmic(F :: RngDiff) -> BoolElt
 {
     Let F be a field of the form K(x, M1, ..., Mn). Return if M_n is logarithmic
     over F.
