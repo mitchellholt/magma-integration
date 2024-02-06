@@ -22,20 +22,18 @@ intrinsic LogarithmicRothsteinTrager(
 
     _, denom_derivative := IsPolynomial(Derivative(inclusion(b)));
 
-    integral_sequence := [];
     PP := PolynomialRing(CoefficientRing(P), 2);
 
     a := MultivariatePolynomial(PP, num, 1);
     b := MultivariatePolynomial(PP, denom, 1);
     b_derivative := MultivariatePolynomial(PP, denom_derivative, 1);
-
     r := UnivariatePolynomial(Resultant(a - PP.2 * b_derivative, b, PP.1));
 
-    // Integral is elementary iff r/lc has constant coefficients
+    // Integral is elementary iff r/lc(r) has constant coefficients
     lc := LeadingCoefficient(r);
     for coeff in Coefficients(r) do
         if Derivative(inclusion(coeff/lc)) ne 0 then
-            return false, integral_sequence;
+            return false, [];
         end if;
     end for;
 
