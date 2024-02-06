@@ -16,6 +16,8 @@ intrinsic AsFraction(f :: RngDiffElt) -> FldFunRatElt
         : "The argument must come from a differential ring that can be coerced \
         into a field.";
 
+    require NumberOfGenerators(F) eq 1 : "Bad format for differential field";
+
     // This happens when F is a differential field. For some reason it works
     // here, so we don't even need to call AsFraction, can just use numerator
     // and denominator on f
@@ -25,6 +27,20 @@ intrinsic AsFraction(f :: RngDiffElt) -> FldFunRatElt
     // AAAH why is this necessary?? It is only in the case of F(x) that this is
     // necessary
     return RationalFunctionField(BaseRing(R)) ! f;
+end intrinsic;
+
+
+intrinsic IsPolynomial(f :: RngDiffElt) -> Bool, RngUPolElt
+{
+    Return if the input is a polynomial over the first generator of the field.
+    If it is, also return its representation as a polynomial.
+}
+    frac := AsFraction(f);
+    poly;
+    if Denominator(f) ne 1 then return false, poly; end if;
+    // If can't coerce poly into Parent(F), also return a homomorphism and
+    // include note in report
+    return true, UnivariatePolynomial(Numerator(f));
 end intrinsic;
 
 
@@ -83,12 +99,10 @@ intrinsic IsTranscendentalLogarithm(new :: RngDiffElt, logarithms :: SeqEnum) ->
     F := Universe(logarithms);
     require ISA(Type(F), RngDiff) and IsField(F)
         : "logarithms do not come from a differential field";
-    // logarithms U {1, x} 1 is a basis for the ConstantField(F)-subfield of F
-    // containing primitive elementary functions.
-
-    // TODO use Risch to set up a linear system, solve with IsConsistent and
-    // check that the system is not consistent or has solution 0.
-    // For now, just check that new not in logarithms rip
+    // TODO construct the Z-module with 1 and all of the elementary generators
+    // of F as a basis. Use Risch to set up a linear system for the new
+    // logarithm, and that there is no solution with a positive coefficient for
+    // the term corresponding to new and non-negative coefficients elsewhere.
     if new in logarithms then
         return [ F | < new, 1 > ];
     else
@@ -124,9 +138,9 @@ intrinsic TranscendentalLogarithmicExtension(F :: RngDiff, f :: RngDiffElt:
     end if;
 
     fld := LogarithmicFieldExtension(F, Derivative(f)/f);
-    // little bug fix, courtesy of Nils Bruin. Should work
+    // little bug fix, courtesy of Nils Bruin. Check it worked with assertion
     fld`Generators := [ fld | c : c in OrderedGenerators(UnderlyingField(fld)) ];
-    assert Derivative(fld.1) eq fld ! (Derivative(f)/f); // just to make sure it worked lol
+    assert Derivative(fld.1) eq fld ! (Derivative(f)/f);
     // all arguments are copied, so we own logarithms.
     ChangeUniverse(~logarithms, fld);
     Append(~logarithms, f);
