@@ -20,7 +20,7 @@ intrinsic LogarithmicRothsteinTrager(
     require Domain(inclusion) eq P and ISA(Type(F), RngDiff)
         : "inclusion map has incorrect domain or codomain";
 
-    _, denom_derivative := IsPolynomial(Derivative(inclusion(b)));
+    _, denom_derivative := IsPolynomial(Derivative(inclusion(denom)));
 
     PP := PolynomialRing(CoefficientRing(P), 2);
 
@@ -30,15 +30,20 @@ intrinsic LogarithmicRothsteinTrager(
     r := UnivariatePolynomial(Resultant(a - PP.2 * b_derivative, b, PP.1));
 
     // Integral is elementary iff r/lc(r) has constant coefficients
-    lc := LeadingCoefficient(r);
-    for coeff in Coefficients(r) do
-        if Derivative(inclusion(coeff/lc)) ne 0 then
+    r := r/LeadingCoefficient(r);
+    coeffs := Coefficients(r);
+    K := ConstantField(F);
+    for coeff in coeffs do
+        if not IsCoercible(K, coeff) then
             return false, [];
         end if;
     end for;
+    ChangeUniverse(~coeffs, K);
+    C, roots := SplittingField(Polynomial(coeffs): Abs := true, Opt := true);
 
-    G, roots := SplittingField(r: Abs := true, Opt := true);
+    G := ExtendConstantField(F, C);
     Q := ChangeRing(P, G);
+
     return true, [ < c, GCD(Q!num - c * Q!denom_derivative, Q!denom) > : c in roots ];
 end intrinsic;
 

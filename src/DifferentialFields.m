@@ -43,6 +43,36 @@ intrinsic IsPolynomial(f :: RngDiffElt) -> BoolElt, RngUPolElt
 end intrinsic;
 
 
+intrinsic ExtendConstantField(F :: RngDiff, C :: Fld) -> RngDiff, Map
+{
+    Same as ConstantFieldExtension, but works for any well-constructed
+    differential field.
+
+    NOTE: THE CURRENT IMPLEMENTATION MAY BE VERY EXPENSIVE BECAUSE OF ALL THE
+    CLOSURES. Ideally, this function would be replaced by an efficient and
+    generalised version of ConstantFieldExtension.
+}
+    require IsField(F) and NumberOfGenerators(F) eq 1
+        : "Bad format for differential field";
+
+    if IsPolyFractionField(F) then
+        return ConstantFieldExtension(F, C);
+    end if;
+
+    PrevFld := CoefficientRing(F);
+    G, inj := ExtendConstantField(PrevFld, C);
+    FNew := G;
+    if IsLogarithmic(F) then
+        FNew := TranscendentalLogarithmicExtension(G,
+                inj(PrevFld ! Denominator(Derivative(F.1))));
+    else
+        FNew := TranscendentalExponentialExtension(G, G!Derivative(F.1)/F.1);
+    end if;
+
+    return FNew, hom< F -> FNew | inj, FNew.1 >;
+end intrinsic;
+
+
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
 //                    LOGARITHMIC DIFFERENTIAL FIELDS                        //
@@ -144,4 +174,24 @@ intrinsic TranscendentalLogarithmicExtension(F :: RngDiff, f :: RngDiffElt:
     ChangeUniverse(~logarithms, fld);
     Append(~logarithms, f);
     return fld, logarithms, fld.1;
+end intrinsic;
+
+
+///////////////////////////////////////////////////////////////////////////////
+//                                                                           //
+//                    EXPONENTIAL DIFFERENTIAL FIELDS                        //
+//                                                                           //
+///////////////////////////////////////////////////////////////////////////////
+
+
+intrinsic TranscendentalExponentialExtension(F :: RngDiff, f :: RngDiffElt:
+        exponentials := []) -> RngDiff, SeqEnum, RngDiffElt
+{
+    TODO
+    idk how this will work yet rip, this is completely filler code
+}
+    G := ExponentialFieldExtension(F, f);
+    ChangeUniverse(~exponentials, G);
+    Append(~exponentials, G.1); // dodgy?
+    return G, exponentials, G.1;
 end intrinsic;
