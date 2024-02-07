@@ -1,7 +1,7 @@
 intrinsic LogarithmicRothsteinTrager(
+        F :: RngDiff,
         num :: RngUPolElt,
-        denom :: RngUPolElt,
-        inclusion :: Map) -> BoolElt, SeqEnum
+        denom :: RngUPolElt) -> BoolElt, SeqEnum
 {
     Use the logarithmic Rothstein-Trager theorem to find if inclusion(num/denom)
     has an elementary integral. If it does, return true and an elementary
@@ -10,16 +10,16 @@ intrinsic LogarithmicRothsteinTrager(
 }
     P := Parent(num);
 
+    require IsLogarithmic(F)
+        : "Inputs do not come from a logarithmic differential field";
     require P eq Parent(denom) and denom ne 0
         : "Bad inputs";
-    require GCD(num, denom) eq 1 and Degree(num) lt Degree(denom)
+    require GCD(num, denom) eq 1
+            and Degree(num) lt Degree(denom)
+            and LeadingCoefficient(denom) eq 1
         : "Inputs do not satisfy the assumptions for Rothstein-Trager";
 
-    F := Codomain(inclusion);
-
-    require Domain(inclusion) eq P and ISA(Type(F), RngDiff)
-        : "inclusion map has incorrect domain or codomain";
-
+    inclusion := hom< P -> F | F.1 >;
     _, denom_derivative := IsPolynomial(Derivative(inclusion(denom)));
 
     PP := PolynomialRing(CoefficientRing(P), 2);
@@ -55,12 +55,10 @@ intrinsic IntegrateLogarithmicPolynomial(f :: RngDiffElt: all_logarithms := [])
     return true, an integral, and a list of all the logarithms appearing in the
     parent differential field of the solution. Otherwise, return false.
 }
-    // TODO supply all_logarithms to ElementaryIntegral to speed up
     // See working from 06/02/2024 in notebook for derivation of algorithm
+    // TODO supply all_logarithms to ElementaryIntegral to speed up
     F := Parent(f);
 
-    // Could check if we can coerce the argument down to a field in the tower
-    // that is logarithmic?
     require IsLogarithmic(F) : "The last generator is not logarithmic";
 
     PrevFld := CoefficientRing(F);
@@ -88,7 +86,7 @@ intrinsic IntegrateLogarithmicPolynomial(f :: RngDiffElt: all_logarithms := [])
         return false, integral, all_logarithms;
     elif #logs gt #all_logarithms then
         return false, integral, all_logarithms;
-    elif #logs eq #all_logarithms and Universe(logs) ! F.1 notin logs then
+    elif #logs eq #all_logarithms and Derivative(F.1) ne Derivative(logs[#logs]) then
         return false, integral, all_logarithms;
     end if;
 
@@ -134,7 +132,7 @@ intrinsic IntegrateLogarithmicPolynomial(f :: RngDiffElt: all_logarithms := [])
             G, G ! Derivative(F.1): logarithms := logs);
         // TODO implement this
         error if rep ne G.1,
-            "TODO refactor so that F.1 is the transcendental we store";
+            "Not implemented. TODO need F.1 to be the transcendental stored";
     end if;
 
     ChangeUniverse(~qs, G);

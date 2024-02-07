@@ -63,12 +63,13 @@ intrinsic ExtendConstantField(F :: RngDiff, C :: Fld) -> RngDiff, Map
     G, inj := ExtendConstantField(PrevFld, C);
     FNew := G;
     if IsLogarithmic(F) then
-        FNew := TranscendentalLogarithmicExtension(G, Derivative(F.1));
+        FNew := TranscendentalLogarithmicExtension(G, G!Derivative(F.1));
     else
         FNew := TranscendentalExponentialExtension(G, G!Derivative(F.1)/F.1);
     end if;
 
-    return FNew, hom< F -> FNew | inj, FNew.1 >;
+    coeff_map := map< F -> G | a :-> inj(PrevFld!a) >;
+    return FNew, hom< F -> FNew | coeff_map, FNew.1 >;
 end intrinsic;
 
 
