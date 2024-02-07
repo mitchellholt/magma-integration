@@ -22,7 +22,7 @@ intrinsic LogarithmicRothsteinTrager(
     inclusion := hom< P -> F | F.1 >;
     _, denom_derivative := IsPolynomial(Derivative(inclusion(denom)));
 
-    PP := PolynomialRing(CoefficientRing(P), 2);
+    PP<y, z> := PolynomialRing(CoefficientRing(P), 2);
 
     a := MultivariatePolynomial(PP, num, 1);
     b := MultivariatePolynomial(PP, denom, 1);
@@ -42,9 +42,10 @@ intrinsic LogarithmicRothsteinTrager(
     C, roots := SplittingField(Polynomial(coeffs): Abs := true, Opt := true);
 
     G := ExtendConstantField(F, C);
-    Q := ChangeRing(P, G);
+    Q := ChangeRing(P, CoefficientRing(G));
+    inclusion := hom< Q -> G | G.1 >;
 
-    return true, [ < c, GCD(Q!num - c * Q!denom_derivative, Q!denom) > : c in roots ];
+    return true, [ < c, inclusion(GCD(Q!num - c * Q!denom_derivative, Q!denom)) > : c in roots ];
 end intrinsic;
 
 intrinsic IntegrateLogarithmicPolynomial(f :: RngDiffElt: all_logarithms := [])

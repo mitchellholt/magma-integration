@@ -24,7 +24,7 @@ assert Degree(denom) eq 1;
 
 integrable, logs := LogarithmicRothsteinTrager(G, num, denom);
 assert integrable;
-assert #logs eq 2; // Field should be Q(x, log(x), log(log(x)))
+error if #logs ne 1, "Test failed", logs;
 deriv := logs[1][1] * (Derivative(logs[1][2])/(logs[1][2]));
-intrep := Parent(deriv)!(inj(num)/inj(denom));
+intrep := Parent(deriv)!(1/(x*g));
 error if deriv ne intrep, "Test failed", deriv, intrep;

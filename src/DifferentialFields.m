@@ -36,21 +36,20 @@ intrinsic IsPolynomial(f :: RngDiffElt) -> BoolElt, RngUPolElt
     If it is, also return its representation as a polynomial.
 }
     frac := AsFraction(f);
-    if Denominator(f) ne 1 then return false, frac; end if;
+    if Denominator(frac) ne 1 then return false, frac; end if;
     // If can't coerce poly into Parent(F), also return a homomorphism and
     // include note in report
-    return true, UnivariatePolynomial(Numerator(f));
+    return true, UnivariatePolynomial(Numerator(frac));
 end intrinsic;
 
 
-intrinsic ExtendConstantField(F :: RngDiff, C :: Fld) -> RngDiff, Map
+intrinsic ExtendConstantField(F :: RngDiff, C :: Fld) -> RngDiff
 {
     Same as ConstantFieldExtension, but works for any well-constructed
     differential field.
 
-    NOTE: THE CURRENT IMPLEMENTATION MAY BE VERY EXPENSIVE BECAUSE OF ALL THE
-    CLOSURES. Ideally, this function would be replaced by an efficient and
-    generalised version of ConstantFieldExtension.
+    Ideally, this function would be replaced by a generalised version of
+    ConstantFieldExtension.
 }
     require IsField(F) and NumberOfGenerators(F) eq 1
         : "Bad format for differential field";
@@ -60,16 +59,14 @@ intrinsic ExtendConstantField(F :: RngDiff, C :: Fld) -> RngDiff, Map
     end if;
 
     PrevFld := CoefficientRing(F);
-    G, inj := ExtendConstantField(PrevFld, C);
-    FNew := G;
+    G := ExtendConstantField(PrevFld, C);
     if IsLogarithmic(F) then
-        FNew := TranscendentalLogarithmicExtension(G, G!Derivative(F.1));
+        G := TranscendentalLogarithmicExtension(G, G!Derivative(F.1));
     else
-        FNew := TranscendentalExponentialExtension(G, G!Derivative(F.1)/F.1);
+        G := TranscendentalExponentialExtension(G, G!Derivative(F.1)/F.1);
     end if;
 
-    coeff_map := map< F -> G | a :-> inj(PrevFld!a) >;
-    return FNew, hom< F -> FNew | coeff_map, FNew.1 >;
+    return G;
 end intrinsic;
 
 
