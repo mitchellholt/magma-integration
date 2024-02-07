@@ -66,8 +66,8 @@ intrinsic RationalIntegral(f :: RngDiffElt) -> RngDiffElt, SeqEnum
     // fast simplification; works assuming gcd(num, denom) = 1
     poly_part, num := Quotrem(num, denom);
 
-    rational_part := R ! Integral(poly_part);
-    log_part := F ! 0;
+    rational_part := R!Integral(poly_part);
+    log_part := F!0;
 
     all_logarithms := [F|]; // list of all logarithms used. Universe is always F
 
@@ -100,11 +100,11 @@ intrinsic RationalIntegral(f :: RngDiffElt) -> RngDiffElt, SeqEnum
         for log in logs do // log is < constant, log argument > pair
             F, all_logarithms, log_rep := TranscendentalLogarithmicExtension(
                     F,
-                    F ! (log[2]/Derivative(log[2])):
+                    F!(Derivative(log[2])/log[2]):
                     logarithms := all_logarithms);
-            log_part := F ! log_part + (F ! log[1] * log_rep);
+            log_part := F!log_part + (F!log[1] * log_rep);
         end for;
     end for;
 
-    return (F ! rational_part) + log_part, all_logarithms;
+    return F!rational_part + log_part, all_logarithms;
 end intrinsic;

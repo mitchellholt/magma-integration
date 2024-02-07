@@ -7,7 +7,7 @@ G<g> := TranscendentalLogarithmicExtension(F, x);
 poly := g;
 is_elementary, integral := IntegrateLogarithmicPolynomial(g);
 assert is_elementary;
-error if Derivative(integral) ne Parent(integral) ! g, Derivative(integral), g;
+error if Derivative(integral) ne Parent(integral) ! g, "Test failed", Derivative(integral), g;
 
 // integrate log x / (x + 1)
 poly := G ! (g/(x + 1));
@@ -29,4 +29,4 @@ assert integrable;
 assert #logs eq 1;
 deriv := logs[1][1] * (Derivative(logs[1][2])/(logs[1][2]));
 intrep := Parent(deriv)!(inj(num)/inj(denom));
-error if deriv ne intrep, deriv, intrep;
+error if deriv ne intrep, "Test failed", deriv, intrep;

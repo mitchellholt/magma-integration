@@ -170,7 +170,7 @@ intrinsic TranscendentalLogarithmicExtension(F :: RngDiff, f :: RngDiffElt:
 
     prod_comb := IsTranscendentalLogarithm(f, logarithms);
     if #prod_comb gt 0 then
-        return F, logarithms, F ! &*[ tm[1]^tm[2] : tm in prod_comb ];
+        return F, logarithms, F ! &+[ tm[1]*tm[2] : tm in prod_comb ];
     end if;
 
     fld := LogarithmicFieldExtension(F, f);
