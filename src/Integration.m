@@ -19,20 +19,29 @@ intrinsic ElementaryIntegral(f :: RngDiffElt: all_logarithms := []) -> BoolElt, 
 end intrinsic;
 
 
-intrinsic NameField(~F :: RngDiff: FirstExtName := "x")
+intrinsic NameField(~F :: RngDiff: FirstExtName := "x", AlgNumName := "a")
 {
     Using sensible defaults, name the transcendental generators of F.
+
     FirstExtName is the name to be assigned to the (unique) transcendental over
     the constant field which has derivative 1.
+
+    AlgNumName is the name of the algeraic generator of the constant field (if
+    any).
 }
     if IsPolyFractionField(F) then
         AssignNames(~F, [ FirstExtName ]);
         R := RationalFunctionField(BaseRing(UnderlyingField(F)));
         AssignNames(~R, [ FirstExtName ]); // cringe edge case strikes again
+        K := ConstantField(F);
+        AssignNames(~K, [ AlgNumName ]);
     else
         G := CoefficientRing(F);
         NameField(~G);
         if IsLogarithmic(F) then
+            // if logs are independent this doesn't work. TODO keep taking
+            // coefficient rings until G!Denominator(AsFraction(G!Derivative(F.1)))
+            // is non-constant
             AssignNames(~F, [
                 Sprintf("log(%o)", G!Denominator(AsFraction(G!Derivative(F.1))))
             ]);
