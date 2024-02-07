@@ -128,17 +128,18 @@ intrinsic IntegrateLogarithmicPolynomial(f :: RngDiffElt: all_logarithms := [])
     end if;
     integral *:= -1;
 
-    // F.1 can appear as a log in G, but cannot be included in the argument to
-    // new any log. TODO Need to fix this because it dodges Risch atm
     G := Parent(integral);
     if not IsCoercible(G, F.1) then
-        G := LogarithmicFieldExtension(G, G ! Derivative(F.1));
-        ChangeUniverse(~logs, G);
-        Append(~logs, F.1);
+        G, logs, rep := TranscendentalLogarithmicExtension(
+            G, G ! Derivative(F.1): logarithms := logs);
+        // TODO implement this
+        error if rep ne G.1,
+            "TODO refactor so that F.1 is the transcendental we store";
     end if;
 
+    ChangeUniverse(~qs, G);
     for i in [ 0 .. deg + 1 ] do
-        integral +:= G ! (qs[i + 1] * F.1^i);
+        integral +:= qs[i + 1] * G.1^i;
     end for;
 
     return true, integral, logs;

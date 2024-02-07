@@ -90,16 +90,18 @@ intrinsic RationalIntegral(f :: RngDiffElt) -> RngDiffElt, SeqEnum
 
         K := ConstantField(F);
         if Type(K) ne FldNum then // no algebraic extensions
-            F := ConstantFieldExtension(F, C); // might be trivial
+            F := ExtendConstantField(F, C); // might be trivial
             ChangeUniverse(~all_logarithms, F);
         elif Type(C) eq FldNum then // both K, C have alg. exts.
-            F := ConstantFieldExtension(F, Compositum(K, C));
+            F := ExtendConstantField(F, Compositum(K, C));
             ChangeUniverse(~all_logarithms, F);
         end if; // last case is C = K = Q, so nothing to do there
 
         for log in logs do // log is < constant, log argument > pair
             F, all_logarithms, log_rep := TranscendentalLogarithmicExtension(
-                    F, F ! log[2]: logarithms := all_logarithms);
+                    F,
+                    F ! (log[2]/Derivative(log[2])):
+                    logarithms := all_logarithms);
             log_part := F ! log_part + (F ! log[1] * log_rep);
         end for;
     end for;

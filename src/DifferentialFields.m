@@ -63,8 +63,7 @@ intrinsic ExtendConstantField(F :: RngDiff, C :: Fld) -> RngDiff, Map
     G, inj := ExtendConstantField(PrevFld, C);
     FNew := G;
     if IsLogarithmic(F) then
-        FNew := TranscendentalLogarithmicExtension(
-                G, inj(Denominator(PrevFld ! Derivative(F.1))));
+        FNew := TranscendentalLogarithmicExtension(G, Derivative(F.1));
     else
         FNew := TranscendentalExponentialExtension(G, G!Derivative(F.1)/F.1);
     end if;
@@ -82,8 +81,8 @@ end intrinsic;
 
 intrinsic IsLogarithmic(F :: RngDiff) -> BoolElt
 {
-    Let F be a field of the form K(x, M1, ..., Mn). Return if M_n is logarithmic
-    over F.
+    Determine if F is of the form G(L) for some elementary function field G
+    and elementary function L which is transcendental over G.
 }
     require IsField(F) : "Input must be a differential field";
     require NumberOfGenerators(F) eq 1 : "Bad format for differential field";
@@ -100,7 +99,10 @@ end intrinsic;
 
 
 intrinsic AllLogarithms(F :: RngDiff) -> SeqEnum
-{ Give an ordered sequence of all of the logarithmic generators of F. }
+{
+    Give an ordered sequence of all of the derivatives of the logarithmic
+    generators of F.
+}
     logarithms := [F|];
     while not IsPolyFractionField(F) do
         if IsLogarithmic(F) then
@@ -115,44 +117,49 @@ end intrinsic;
 
 intrinsic IsTranscendentalLogarithm(new :: RngDiffElt, logarithms :: SeqEnum) -> SeqEnum
 {
-    Given a potential new logarithm argument to be put over a differential field,
-    use the Risch Structure Theorem to check if the new logarithm is
-    transcendental. If it is, return the empty sequence. If not, return the
-    product combination as a list of < factor, non-zero power > pairs in the
-    differetial field equal to the new argument.
+    Given the derivative of a new logarithm over a differential field, use the
+    Risch Structure Theorem to check if the new logarithm is transcendental. If
+    it is, return the empty sequence. If not, return the product combination as
+    a list of < factor, non-zero power > pairs in the differential field equal
+    to the new argument.
 
-    Assume that [log(f) : f in logarithms] is an algebraically independent set
-    over Universe(logarithms). Also assume that each f in logarithms is
-    non-constant.
+    Assume that logarithms is an algebraically independent set over
+    Universe(logarithms) and that each element of logarithms is non-constant.
 }
     F := Universe(logarithms);
+
+    require F eq Parent(new) : "New logarithm does not have a derivative in \
+            the same field as the other logarithms";
     require ISA(Type(F), RngDiff) and IsField(F)
         : "logarithms do not come from a differential field";
+    require NumberOfGenerators(F) eq 1 : "Bad format for differential field";
+
     // TODO construct the Z-module with 1 and all of the elementary generators
     // of F as a basis. Use Risch to set up a linear system for the new
     // logarithm, and that there is no solution with a positive coefficient for
     // the term corresponding to new and non-negative coefficients elsewhere.
-    if new in logarithms then
-        return [ F | < new, 1 > ];
-    else
-        return [F|];
-    end if;
+    for log in logarithms do
+        if Derivative(log) eq new then
+            return [ <log, 1 > ];
+        end if;
+    end for;
+
+    // logarithm is transcendental
+    return [];
 end intrinsic;
 
 
 intrinsic TranscendentalLogarithmicExtension(F :: RngDiff, f :: RngDiffElt:
         logarithms := []) -> RngDiff, SeqEnum, RngDiffElt
 {
-    Compute the differential extension field F(L), where L is logarithmic over
-    F with derivative f'/f. If L is not transcendental, remove it. Otherwise
-    return F(L). Also return all of the logarithms of F(L) and the
-    representation of L inside of F(L) (which may be a transcendental over F or
-    an element of F)
+    Return the differential extension field F(L), where L is logarithmic over
+    F with derivative f. Also return all of the logarithms of F(L) and the
+    representation of L inside of F(L) (which may be transcendental over F or an
+    element of F).
 }
-    require Derivative(f) ne 0 : "Constants must not be transcendental over Q";
-    require Parent(f) cmpeq F
-        : "Argument to be given to the new logarithm does not belong to the \
-        given differential field";
+    require f ne 0 : "Constants must not be transcendental over Q";
+    require Parent(f) cmpeq F : "Argument to be given to the new logarithm \
+        does not belong to the given differential field";
 
     if #logarithms eq 0 then
         logarithms := AllLogarithms(F);
@@ -166,13 +173,13 @@ intrinsic TranscendentalLogarithmicExtension(F :: RngDiff, f :: RngDiffElt:
         return F, logarithms, F ! &*[ tm[1]^tm[2] : tm in prod_comb ];
     end if;
 
-    fld := LogarithmicFieldExtension(F, Derivative(f)/f);
+    fld := LogarithmicFieldExtension(F, f);
     // little bug fix, courtesy of Nils Bruin. Check it worked with assertion
     fld`Generators := [ fld | c : c in OrderedGenerators(UnderlyingField(fld)) ];
-    assert Derivative(fld.1) eq fld ! (Derivative(f)/f);
+    assert Derivative(fld.1) eq fld!f;
     // all arguments are copied, so we own logarithms.
     ChangeUniverse(~logarithms, fld);
-    Append(~logarithms, f);
+    Append(~logarithms, fld.1);
     return fld, logarithms, fld.1;
 end intrinsic;
 
