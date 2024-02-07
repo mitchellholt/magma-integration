@@ -1,6 +1,7 @@
-function IsPolyFractionField(F)
+intrinsic IsPolyFractionField(F :: RngDiff) -> BoolElt
+{ Determine if the input is K(x) for a constant field K }
     return not ISA(Type(UnderlyingRing(F)), FldFunRat);
-end function;
+end intrinsic;
 
 
 intrinsic AsFraction(f :: RngDiffElt) -> FldFunRatElt

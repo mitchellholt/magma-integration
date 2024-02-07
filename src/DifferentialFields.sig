@@ -1,4 +1,5 @@
 177,0
+S,IsPolyFractionField,Determine if the input is K(x) for a constant field K,0,1,0,0,0,0,0,0,0,193,,36,-38,-38,-38,-38,-38
 S,AsFraction,Assume the argument is from a field of the form L = F(x) for some differntial field F. Return the argument as an element of the rational function field F(x),0,1,0,0,0,0,0,0,0,194,,-41,-38,-38,-38,-38,-38
 S,IsPolynomial,"Return if the input is a polynomial over the first generator of the field. If it is, also return its representation as a polynomial",0,1,0,0,0,0,0,0,0,194,,36,312,-38,-38,-38,-38
 S,ExtendConstantField,"Same as ConstantFieldExtension, but works for any well-constructed differential field. Ideally, this function would be replaced by a generalised version of ConstantFieldExtension",0,2,0,0,0,0,0,0,0,-24,,0,0,193,,193,-38,-38,-38,-38,-38

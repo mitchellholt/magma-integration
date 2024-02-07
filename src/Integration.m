@@ -17,3 +17,33 @@ intrinsic ElementaryIntegral(f :: RngDiffElt: all_logarithms := []) -> BoolElt, 
         return true, integral, logs;
     end if;
 end intrinsic;
+
+
+intrinsic NameField(~F :: RngDiff: FirstExtName := "x")
+{
+    Using sensible defaults, name the transcendental generators of F.
+    FirstExtName is the name to be assigned to the (unique) transcendental over
+    the constant field which has derivative 1.
+}
+    if IsPolyFractionField(F) then
+        AssignNames(~F, [ FirstExtName ]);
+        R := RationalFunctionField(BaseRing(UnderlyingField(F)));
+        AssignNames(~R, [ FirstExtName ]); // cringe edge case strikes again
+    else
+        G := CoefficientRing(F);
+        NameField(~G);
+        if IsLogarithmic(F) then
+            AssignNames(~F, [
+                Sprintf("log(%o)", G!Denominator(AsFraction(G!Derivative(F.1))))
+            ]);
+        else
+            // Exponential case. This is possibly expensive
+            // TODO figure out a better way I guess. Note that the user
+            // DEFINITELY knows the name of this exponential, so could just cop
+            // out and get them to input?
+            integrable, itg := ElementaryIntegral(Derivative(F.1)/F.1);
+            assert integrable;
+            AssignNames(~F, [ Sprintf("exp(%o)", itg) ]);
+        end if;
+    end if;
+end intrinsic;

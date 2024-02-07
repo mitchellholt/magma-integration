@@ -45,7 +45,11 @@ intrinsic LogarithmicRothsteinTrager(
     Q := ChangeRing(P, CoefficientRing(G));
     inclusion := hom< Q -> G | G.1 >;
 
-    return true, [ < c, inclusion(GCD(Q!num - c * Q!denom_derivative, Q!denom)) > : c in roots ];
+    return true,
+        [
+            < c, inclusion(GCD(Q!num - c * Q!denom_derivative, Q!denom)) >
+            : c in roots
+        ];
 end intrinsic;
 
 intrinsic IntegrateLogarithmicPolynomial(f :: RngDiffElt: all_logarithms := [])
