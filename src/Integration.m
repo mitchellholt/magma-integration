@@ -39,12 +39,12 @@ intrinsic NameField(~F :: RngDiff: FirstExtName := "x", AlgNumName := "a")
         G := CoefficientRing(F);
         NameField(~G);
         if IsLogarithmic(F) then
-            // if logs are independent this doesn't work. TODO keep taking
-            // coefficient rings until G!Denominator(AsFraction(G!Derivative(F.1)))
-            // is non-constant
-            AssignNames(~F, [
-                Sprintf("log(%o)", G!Denominator(AsFraction(G!Derivative(F.1))))
-            ]);
+            rep := G!Denominator(AsFraction(G!Derivative(F.1)));
+            while rep eq 1 do
+                G := CoefficientRing(G);
+                rep := G!Denominator(AsFraction(G!Derivative(F.1)));
+            end while;
+            AssignNames(~F, [ Sprintf("log(%o)", rep) ]);
         else
             // Exponential case. This is possibly expensive
             // TODO figure out a better way I guess. Note that the user

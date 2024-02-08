@@ -83,7 +83,9 @@ intrinsic RationalIntegral(f :: RngDiffElt) -> RngDiffElt, SeqEnum
             tm[2] -:= 1;
         end while;
 
-        if (tm[3] eq 0) then continue; end if; // integral is rational
+        if (tm[3] eq 0) then
+            continue;
+        end if; // integral is rational
 
         logs := UnsafeRothsteinTrager(tm[3], tm[1]);
         C := Parent(logs[1][1]); // note logs is always non-empty

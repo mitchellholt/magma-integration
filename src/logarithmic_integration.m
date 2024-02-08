@@ -61,7 +61,6 @@ intrinsic IntegrateLogarithmicPolynomial(f :: RngDiffElt: all_logarithms := [])
     parent differential field of the solution. Otherwise, return false.
 }
     // See working from 06/02/2024 in notebook for derivation of algorithm
-    // TODO supply all_logarithms to ElementaryIntegral to speed up
     F := Parent(f);
 
     require IsLogarithmic(F) : "The last generator is not logarithmic";
@@ -76,6 +75,8 @@ intrinsic IntegrateLogarithmicPolynomial(f :: RngDiffElt: all_logarithms := [])
         all_logarithms := AllLogarithms(F);
     end if;
 
+    prev_logarithms := all_logarithms[[ 1 .. #all_logarithms - 1]];
+
     if poly eq 0 then return true, F ! poly, all_logarithms; end if;
     integral := F ! 0; // placeholder value
     deg := Degree(poly);
@@ -85,7 +86,8 @@ intrinsic IntegrateLogarithmicPolynomial(f :: RngDiffElt: all_logarithms := [])
     qs := [ CoefficientRing(F) | 0 : _ in [ 0 .. deg + 1 ] ];
 
     // calculate the two leading terms
-    is_elementary, integral, logs := ElementaryIntegral(PrevFld ! ps[deg + 1]);
+    is_elementary, integral, logs := ElementaryIntegral(
+             PrevFld ! ps[deg + 1]: all_logarithms := prev_logarithms);
 
     if not is_elementary then
         return false, integral, all_logarithms;
@@ -106,7 +108,8 @@ intrinsic IntegrateLogarithmicPolynomial(f :: RngDiffElt: all_logarithms := [])
     i := deg - 1; // the index for q_i is i + 1 rip
     while i gt 0 do
         is_elementary, integral, logs := ElementaryIntegral(
-                PrevFld ! (ps[i + 1] + (i + 1)*qs[i + 2]*Derivative(F.1)));
+                PrevFld ! (ps[i + 1] + (i + 1)*qs[i + 2]*Derivative(F.1)):
+                all_logarithms := prev_logarithms);
         if not is_elementary then
             return false, integral, all_logarithms;
         elif #logs gt #all_logarithms then
@@ -125,7 +128,8 @@ intrinsic IntegrateLogarithmicPolynomial(f :: RngDiffElt: all_logarithms := [])
     end while;
 
     is_elementary, integral, logs := ElementaryIntegral(
-                PrevFld ! (ps[1] + (1)*qs[i + 2]*Derivative(F.1)));
+                PrevFld ! (ps[1] + (1)*qs[i + 2]*Derivative(F.1)):
+                all_logarithms := prev_logarithms);
     if not is_elementary then
         return false, integral, all_logarithms;
     end if;
@@ -150,7 +154,77 @@ end intrinsic;
 
 
 intrinsic LogarithmicIntegral(f :: RngDiffElt: all_logarithms := []) -> BoolElt, RngDiffElt, SeqEnum
-{ Integrate the given logarithmic function }
-    // TODO hermite and Rothstein-Trager
-    return IntegrateLogarithmicPolynomial(f: all_logarithms := all_logarithms);
+{
+    Integrate the given logarithmic function. Return the integral and all of the
+    logarithms used.
+}
+
+    F := Parent(f);
+
+    require IsField(F) and NumberOfGenerators(F) eq 1
+        : "Bad format for differential field";
+
+    if #all_logarithms eq 0 then
+        all_logarithms := AllLogarithms(F);
+    end if;
+
+    if f eq 0
+        then return true, f, all_logarithms;
+    end if;
+
+    plyfrac := AsFraction(f);
+    num := UnivariatePolynomial(Numerator(plyfrac));
+    denom := UnivariatePolynomial(Denominator(plyfrac));
+    R := Parent(num/denom);
+    injection := hom< R -> F | F.1 >;
+    poly_part, num := Quotrem(num, denom);
+    elementary, rat_part, all_logarithms := IntegrateLogarithmicPolynomial(
+            injection(poly_part): all_logarithms := all_logarithms);
+
+    if not elementary
+        then return false, f, all_logarithms;
+    end if;
+
+    log_part := F!0;
+    for term in SquarefreePartialFractionDecomposition(num/denom) do
+        tm := term;
+        while tm[2] gt 1 do
+            _, s, t := XGCD(tm[1], Derivative(tm[1]));
+            s *:= tm[3];
+            t *:= tm[3];
+            rat_part +:= elt< R | -t/(tm[2] - 1), tm[1]^(tm[2] - 1)>;
+            tm[3] := s + (Derivative(t) / (tm[2] - 1));
+            tm[2] -:= 1;
+        end while;
+
+        if (tm[3] eq 0) then
+            continue;
+        end if; // integral is rational
+
+        elementary, new_logs := LogarithmicRothsteinTrager(F, tm[3], tm[1]);
+        if not elementary then
+            return false, f, all_logarithms;
+        end if;
+
+        C := Parent(new_logs[1][1]);
+
+        K := ConstantField(F);
+        if Type(K) ne FldNum then
+            F := ExtendConstantField(F, C);
+            ChangeUniverse(~all_logarithms, F);
+        elif Type(C) eq FldNum then
+            F := ExtendConstantField(F, Compositum(K, C));
+            ChangeUniverse(~all_logarithms, F);
+        end if;
+
+        for log in new_logs do
+            F, all_logarithms, log_rep := TranscendentalLogarithmicExtension(
+                    F,
+                    F!(Derivative(log[2])/log[2]):
+                    logarithms := all_logarithms);
+            log_part := F!log_part + (F!log[1] * log_rep);
+        end for;
+    end for;
+
+    return true, F!rat_part + log_part, all_logarithms;
 end intrinsic;
