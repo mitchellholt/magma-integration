@@ -21,6 +21,7 @@ intrinsic LogarithmicRothsteinTrager(
 
     inclusion := hom< P -> F | F.1 >;
     _, denom_derivative := IsPolynomial(Derivative(inclusion(denom)));
+    denom_derivative := P!denom_derivative; // idk why we don't have equality by default
 
     PP<y, z> := PolynomialRing(CoefficientRing(P), 2);
 
@@ -147,8 +148,6 @@ intrinsic IntegrateLogarithmicPolynomial(f :: RngDiffElt: all_logarithms := [])
     end if;
     integral *:= -1;
 
-    print qs, integral;
-
     G := Parent(integral);
     if not IsCoercible(G, F.1) then // this could make some errors
         G, logs, rep := TranscendentalLogarithmicExtension(
@@ -195,16 +194,16 @@ intrinsic LogarithmicIntegral(f :: RngDiffElt: all_logarithms := []) -> BoolElt,
     elementary, integral, all_logarithms := IntegrateLogarithmicPolynomial(
             injection(poly_part): all_logarithms := all_logarithms);
     
+    if not elementary then
+        return false, f, all_logarithms;
+    end if;
+
     if num eq 0 then
         return true, integral, all_logarithms;
     end if;
 
     injection := hom< R -> Parent(integral) | F.1 >;
     F := Parent(integral);
-
-    if not elementary then
-        return false, f, all_logarithms;
-    end if;
 
     for term in SquarefreePartialFractionDecomposition(num/denom) do
         tm := term;
