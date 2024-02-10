@@ -41,7 +41,7 @@ assert Derivative(integral) eq Parent(integral)!h;
 h := G!(1/(x + 1));
 elementary, integral := LogarithmicIntegral(h);
 assert elementary;
-assert G!Derivative(integral) eq h;
+assert Derivative(integral) eq Parent(integral)!h;
 
 // integrate 1/log(x)
 h := G!(1/g);
