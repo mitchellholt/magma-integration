@@ -75,11 +75,17 @@ intrinsic IntegrateLogarithmicPolynomial(f :: RngDiffElt: all_logarithms := [])
         all_logarithms := AllLogarithms(F);
     end if;
 
+    // print f, all_logarithms;
+
     prev_logarithms := all_logarithms[[ 1 .. #all_logarithms - 1]];
 
     if poly eq 0 then return true, F ! poly, all_logarithms; end if;
     integral := F ! 0; // placeholder value
     deg := Degree(poly);
+    if deg eq 0 then
+        // special case - can just integrate in the previous field
+        return ElementaryIntegral(PrevFld!f);
+    end if;
     // REMEMBER 1 INDEXING HERE!!!!
     ps := Coefficients(poly);
     ChangeUniverse(~ps, F);
@@ -94,6 +100,9 @@ intrinsic IntegrateLogarithmicPolynomial(f :: RngDiffElt: all_logarithms := [])
     elif #logs gt #all_logarithms then
         return false, integral, all_logarithms;
     elif #logs eq #all_logarithms and Derivative(F.1) ne Derivative(logs[#logs]) then
+        // field := Universe(logs);
+        // NameField(~field);
+        // print logs, all_logarithms, integral;
         return false, integral, all_logarithms;
     end if;
 
@@ -102,6 +111,9 @@ intrinsic IntegrateLogarithmicPolynomial(f :: RngDiffElt: all_logarithms := [])
         return false, integral, all_logarithms;
     end if;
     qs[deg + 2] := -Coefficient(poly, 1)/(deg + 1);
+    if Derivative(qs[deg + 2]) ne 0 then
+        return false, integral, all_logarithms;
+    end if;
     qs[deg + 1] := Coefficient(poly, 0);
 
     // calculate the remaining non-zero terms
@@ -136,7 +148,7 @@ intrinsic IntegrateLogarithmicPolynomial(f :: RngDiffElt: all_logarithms := [])
     integral *:= -1;
 
     G := Parent(integral);
-    if not IsCoercible(G, F.1) then
+    if not IsCoercible(G, F.1) then // THIS DOES NOT WORK
         G, logs, rep := TranscendentalLogarithmicExtension(
             G, G ! Derivative(F.1): logarithms := logs);
         // TODO implement this
@@ -178,21 +190,27 @@ intrinsic LogarithmicIntegral(f :: RngDiffElt: all_logarithms := []) -> BoolElt,
     R := Parent(num/denom);
     injection := hom< R -> F | F.1 >;
     poly_part, num := Quotrem(num, denom);
-    elementary, rat_part, all_logarithms := IntegrateLogarithmicPolynomial(
+    elementary, integral, all_logarithms := IntegrateLogarithmicPolynomial(
             injection(poly_part): all_logarithms := all_logarithms);
-
-    if not elementary
-        then return false, f, all_logarithms;
+    
+    if num eq 0 then
+        return true, integral, all_logarithms;
     end if;
 
-    log_part := F!0;
+    injection := hom< R -> Parent(integral) | F.1 >;
+    F := Parent(integral);
+
+    if not elementary then
+        return false, f, all_logarithms;
+    end if;
+
     for term in SquarefreePartialFractionDecomposition(num/denom) do
         tm := term;
         while tm[2] gt 1 do
             _, s, t := XGCD(tm[1], Derivative(tm[1]));
             s *:= tm[3];
             t *:= tm[3];
-            rat_part +:= elt< R | -t/(tm[2] - 1), tm[1]^(tm[2] - 1)>;
+            integral +:= injection(elt< R | -t/(tm[2] - 1), tm[1]^(tm[2] - 1)>);
             tm[3] := s + (Derivative(t) / (tm[2] - 1));
             tm[2] -:= 1;
         end while;
@@ -222,9 +240,9 @@ intrinsic LogarithmicIntegral(f :: RngDiffElt: all_logarithms := []) -> BoolElt,
                     F,
                     F!(Derivative(log[2])/log[2]):
                     logarithms := all_logarithms);
-            log_part := F!log_part + (F!log[1] * log_rep);
+            integral := F!integral + (F!log[1] * log_rep);
         end for;
     end for;
 
-    return true, F!rat_part + log_part, all_logarithms;
+    return true, integral, all_logarithms;
 end intrinsic;
