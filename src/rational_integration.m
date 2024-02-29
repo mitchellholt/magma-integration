@@ -1,25 +1,3 @@
-function UnsafeRothsteinTrager(f, g: dbg := false)
-    K := BaseRing(f);
-    PP := PolynomialRing(K, 2);
-
-    // Lift f, g from K[x] to K[x, y]
-    a := MultivariatePolynomial(PP, f, 1);
-    b := MultivariatePolynomial(PP, g, 1);
-
-    r := UnivariatePolynomial(Resultant(a - PP.2 * Derivative(b, PP.1), b, PP.1));
-    if dbg then
-        printf "Res is %o", r;
-    end if;
-    F, roots := SplittingField(r: Abs := true, Opt := true);
-    if dbg then
-        printf "Splitting field defined by %o", DefiningPolynomial(F);
-    end if;
-    G := ChangeRing(PolynomialRing(K), F);
-
-    return [<c, GCD((G ! f) - c * (G !(Derivative(g))), (G ! g))> : c in roots];
-end function;
-
-
 intrinsic RothsteinTrager(num :: RngUPolElt, denom :: RngUPolElt) -> SeqEnum
 {
     Perform the Rothstein-Trager algorithm on the numerator, denominator input.
@@ -37,7 +15,21 @@ intrinsic RothsteinTrager(num :: RngUPolElt, denom :: RngUPolElt) -> SeqEnum
     require LeadingCoefficient(denom) eq 1: "Denominator must be monic";
     require IsSquarefree(denom): "Denominator must be squarefree";
 
-    return UnsafeRothsteinTrager(num, denom);
+    K := BaseRing(num);
+    PP := PolynomialRing(K, 2);
+
+    // Lift num, denom from K[x] to K[x, y]
+    a := MultivariatePolynomial(PP, num, 1);
+    b := MultivariatePolynomial(PP, denom, 1);
+
+    r := UnivariatePolynomial(Resultant(a - PP.2 * Derivative(b, PP.1), b, PP.1));
+    F, roots := SplittingField(r: Abs := true, Opt := true);
+    G := ChangeRing(PolynomialRing(K), F);
+
+    return [
+        <c, GCD((G ! num) - c * (G !(Derivative(denom))), (G ! denom))>
+        : c in roots
+    ];
 end intrinsic;
 
 
@@ -87,7 +79,7 @@ intrinsic RationalIntegral(f :: RngDiffElt) -> RngDiffElt, SeqEnum
             continue;
         end if; // integral is rational
 
-        logs := UnsafeRothsteinTrager(tm[3], tm[1]);
+        logs := RothsteinTrager(tm[3], tm[1]);
         C := Parent(logs[1][1]); // note logs is always non-empty
 
         K := ConstantField(F);
@@ -100,7 +92,7 @@ intrinsic RationalIntegral(f :: RngDiffElt) -> RngDiffElt, SeqEnum
         end if; // last case is C = K = Q, so nothing to do there
 
         for log in logs do // log is < constant, log argument > pair
-            F, all_logarithms, log_rep := TranscendentalLogarithmicExtension(
+            F, all_logarithms, log_rep := LogarithmicExtension(
                     F,
                     F!(Derivative(log[2])/log[2]):
                     logarithms := all_logarithms);

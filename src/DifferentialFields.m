@@ -6,27 +6,23 @@ end intrinsic;
 
 intrinsic AsFraction(f :: RngDiffElt) -> FldFunRatElt
 {
-    Assume the argument is from a field of the form L = F(x) for some
-    differntial field F. Return the argument as an element of the rational
-    function field F(x).
+    Return the representation of f as a fraction.
 }
     F := Parent(f);
     R := UnderlyingRing(F);
     
-    require IsField(R)
-        : "The argument must come from a differential ring that can be coerced \
-        into a field.";
-
-    require NumberOfGenerators(F) eq 1 : "Bad format for differential field";
+    require IsField(R) and NumberOfGenerators(F) eq 1
+        : "Bad format for differential field";
 
     // This happens when F is a differential field. For some reason it works
     // here, so we don't even need to call AsFraction, can just use numerator
     // and denominator on f
-    if ISA(Type(R), FldFunRat) then return R ! f; end if;
+    if ISA(Type(R), FldFunRat)
+        then return R ! f;
+    end if;
 
     // hopefully don't need to create a homormophism as well?
-    // AAAH why is this necessary?? It is only in the case of F(x) that this is
-    // necessary
+    // would be nice if we could do UnderlyingRing(F)!f here
     return RationalFunctionField(BaseRing(R)) ! f;
 end intrinsic;
 
@@ -62,9 +58,9 @@ intrinsic ExtendConstantField(F :: RngDiff, C :: Fld) -> RngDiff
     PrevFld := CoefficientRing(F);
     G := ExtendConstantField(PrevFld, C);
     if IsLogarithmic(F) then
-        G := TranscendentalLogarithmicExtension(G, G!Derivative(F.1));
+        G := LogarithmicExtension(G, G!Derivative(F.1));
     else
-        G := TranscendentalExponentialExtension(G, G!Derivative(F.1)/F.1);
+        G := ExponentialExtension(G, G!Derivative(F.1)/F.1);
     end if;
 
     return G;
@@ -91,16 +87,16 @@ intrinsic IsLogarithmic(F :: RngDiff) -> BoolElt
 
     require NumberOfGenerators(G) eq 1 : "Bad format for differential field";
 
-    // should be true iff Derivative(F.1) in G. Need to ignore coerced value
-    inBaseField, _ :=  IsCoercible(G, Derivative(F.1));
-    return inBaseField;
+    // Need to check if the degree of the numerator of the derivative of F.1 is
+    // zero in the corresponding fraction field.
+    frac := AsFraction(Derivative(F.1));
+    return Degree(Numerator(frac)) eq 0;
 end intrinsic;
 
 
 intrinsic AllLogarithms(F :: RngDiff) -> SeqEnum
 {
-    Give an ordered sequence of all of the derivatives of the logarithmic
-    generators of F.
+    Give an ordered sequence of all of the logarithmic generators of F.
 }
     logarithms := [F|];
     while not IsPolyFractionField(F) do
@@ -148,7 +144,7 @@ intrinsic IsTranscendentalLogarithm(new :: RngDiffElt, logarithms :: SeqEnum) ->
 end intrinsic;
 
 
-intrinsic TranscendentalLogarithmicExtension(F :: RngDiff, f :: RngDiffElt:
+intrinsic LogarithmicExtension(F :: RngDiff, f :: RngDiffElt:
         logarithms := []) -> RngDiff, SeqEnum, RngDiffElt
 {
     Return the differential extension field F(L), where L is logarithmic over
@@ -190,14 +186,53 @@ end intrinsic;
 ///////////////////////////////////////////////////////////////////////////////
 
 
-intrinsic TranscendentalExponentialExtension(F :: RngDiff, f :: RngDiffElt:
+intrinsic ExponentialExtension(F :: RngDiff, f :: RngDiffElt:
         exponentials := []) -> RngDiff, SeqEnum, RngDiffElt
 {
     TODO
     idk how this will work yet rip, this is completely filler code
 }
     G := ExponentialFieldExtension(F, f);
+    G`Generators := [ G | c : c in OrderedGenerators(UnderlyingField(G)) ];
+    assert G!(Derivative(G.1)/(G.1)) eq G!f;
     ChangeUniverse(~exponentials, G);
     Append(~exponentials, G.1); // dodgy?
     return G, exponentials, G.1;
+end intrinsic;
+
+
+intrinsic NameField(~F :: RngDiff: FirstExtName := "x", AlgNumName := "a")
+{
+    Using sensible defaults, name the transcendental generators of F.
+
+    FirstExtName is the name to be assigned to the (unique) transcendental over
+    the constant field which has derivative 1.
+
+    AlgNumName is the name of the algeraic generator of the constant field (if
+    any).
+}
+    if IsPolyFractionField(F) then
+        AssignNames(~F, [ FirstExtName ]);
+        R := RationalFunctionField(BaseRing(UnderlyingField(F)));
+        AssignNames(~R, [ FirstExtName ]); // cringe edge case strikes again
+        K := ConstantField(F);
+        AssignNames(~K, [ AlgNumName ]);
+    else
+        G := CoefficientRing(F);
+        NameField(~G);
+        if IsLogarithmic(F) then
+            rep := G!Denominator(AsFraction(G!Derivative(F.1)));
+            while rep eq 1 do
+                G := CoefficientRing(G);
+                rep := G!Denominator(AsFraction(G!Derivative(F.1)));
+            end while;
+            AssignNames(~F, [ Sprintf("log(%o)", rep) ]);
+        else
+            // Exponential case. This is possibly expensive
+            // TODO figure out a better way I guess. Note that the user
+            // DEFINITELY knows the name of this exponential, so could just cop
+            // out and get them to input?
+            error "not implemented";
+        end if;
+    end if;
 end intrinsic;

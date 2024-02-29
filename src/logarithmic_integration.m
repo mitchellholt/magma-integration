@@ -76,8 +76,6 @@ intrinsic IntegrateLogarithmicPolynomial(f :: RngDiffElt: all_logarithms := [])
         all_logarithms := AllLogarithms(F);
     end if;
 
-    // print f, all_logarithms;
-
     prev_logarithms := all_logarithms[[ 1 .. #all_logarithms - 1]];
 
     if poly eq 0 then return true, F ! poly, all_logarithms; end if;
@@ -101,13 +99,10 @@ intrinsic IntegrateLogarithmicPolynomial(f :: RngDiffElt: all_logarithms := [])
     elif #logs gt #all_logarithms then
         return false, integral, all_logarithms;
     elif #logs eq #all_logarithms and Derivative(F.1) ne Derivative(logs[#logs]) then
-        // field := Universe(logs);
-        // NameField(~field);
-        // print logs, all_logarithms, integral;
         return false, integral, all_logarithms;
     end if;
 
-    is_poly, poly := IsPolynomial(F ! integral); // this had better be coercible
+    is_poly, poly := IsPolynomial(F ! integral); // this had better coerce correctly
     if not IsPolynomial(f) or Degree(poly) gt 1 then
         return false, integral, all_logarithms;
     end if;
@@ -150,7 +145,7 @@ intrinsic IntegrateLogarithmicPolynomial(f :: RngDiffElt: all_logarithms := [])
 
     G := Parent(integral);
     if not IsCoercible(G, F.1) then // this could make some errors
-        G, logs, rep := TranscendentalLogarithmicExtension(
+        G, logs, rep := LogarithmicExtension(
             G, G ! Derivative(F.1): logarithms := logs);
         // TODO implement this
         error if rep ne G.1,
@@ -237,7 +232,7 @@ intrinsic LogarithmicIntegral(f :: RngDiffElt: all_logarithms := []) -> BoolElt,
         end if;
 
         for log in new_logs do
-            F, all_logarithms, log_rep := TranscendentalLogarithmicExtension(
+            F, all_logarithms, log_rep := LogarithmicExtension(
                     F,
                     F!(Derivative(log[2])/log[2]):
                     logarithms := all_logarithms);
