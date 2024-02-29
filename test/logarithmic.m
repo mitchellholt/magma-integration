@@ -1,7 +1,7 @@
 F<x> := RationalDifferentialField(RationalField());
 
 // Polynomials
-G<g> := TranscendentalLogarithmicExtension(F, 1/x);
+G<g> := LogarithmicExtension(F, 1/x);
 
 // integrate log x
 poly := g;
@@ -49,19 +49,28 @@ elementary, integarl := LogarithmicIntegral(h);
 assert not elementary;
 
 // integrate log(log(x))
-H := TranscendentalLogarithmicExtension(G, G!(1/(x*g)));
+H := LogarithmicExtension(G, G!(1/(x*g)));
 elementary, integral := LogarithmicIntegral(H.1);
 assert not elementary;
 
 // Geddes example 12.11
-A<a> := TranscendentalLogarithmicExtension(F, F!(1/(x + 1/2)));
-B<b> := TranscendentalLogarithmicExtension(A, A!(1/x));
+A<a> := LogarithmicExtension(F, F!(1/(x + 1/2)));
+B<b> := LogarithmicExtension(A, A!(1/x));
 fn := (((1/2)*a - x)/((x + 1/2)^2 * a^2) + 4/x)*b^2
     + (((x^2 + x + 1)*a + x^2 - 1)/((x + 1/2)^2) + 2/((x + 1/2)*a) + 4/x)*b
     + ((x - 1/x)*a)/(x + 1/2) + 1/((x + 1/2)*a) + (1/2)/(x*(x + 1/2))
     + 1/(x + 1/2);
-// NameField(~B);
-// print B!fn;
+
+// actual answer
+C<c>, logs := LogarithmicExtension(B, B!(1/(B!(x + 1/2)*a)));
+assert #logs eq 3;
+actual_integral := 4/3*b^3
+    + (x/((x + 1/2)*a) + 2)*b^2
+    + (((x^2 - 1)*a)/(x + 1/2) + 1)*b
+    + c;
+error if B!Derivative(C!actual_integral) ne B!fn,
+      "integrand or actual integral is incorrect";
+
 elementary, integral := LogarithmicIntegral(B!fn);
-assert elementary;
+assert elementary; // fails
 assert Derivative(integral) eq Parent(integral)!fn;
