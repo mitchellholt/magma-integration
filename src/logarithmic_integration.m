@@ -61,7 +61,7 @@ intrinsic IntegrateLogarithmicPolynomial(f :: RngDiffElt: all_logarithms := [])
     return true, an integral, and a list of all the logarithms appearing in the
     parent differential field of the solution. Otherwise, return false.
 }
-    // See working from 06/02/2024 in notebook for derivation of algorithm
+    // See section 5.1 of report for derivation
     F := Parent(f);
 
     require IsLogarithmic(F) : "The last generator is not logarithmic";
@@ -106,7 +106,7 @@ intrinsic IntegrateLogarithmicPolynomial(f :: RngDiffElt: all_logarithms := [])
     if not IsPolynomial(f) or Degree(poly) gt 1 then
         return false, integral, all_logarithms;
     end if;
-    qs[deg + 2] := -Coefficient(poly, 1)/(deg + 1);
+    qs[deg + 2] := Coefficient(poly, 1)/(deg + 1);
     if Derivative(qs[deg + 2]) ne 0 then
         return false, integral, all_logarithms;
     end if;
