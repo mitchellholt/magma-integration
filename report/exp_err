@@ -1,0 +1,11 @@
+> F<x> := RationalDifferentialField(RationalField());
+> G<g> := LogarithmicExtension(F, F!(1/x));
+> E<e> := ExponentialExtension(G, G!1);
+> Derivative(e);
+g
+> e eq g;
+false
+> Generators(E);
+[ e ]
+> CoefficientRing(E) eq G;
+true

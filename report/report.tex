@@ -1,0 +1,347 @@
+\documentclass{article}
+
+\usepackage{amsmath, amssymb, amsthm}
+\usepackage{geometry}
+\usepackage{tcolorbox}
+\usepackage{fancyvrb}
+\usepackage{listings}
+\usepackage[hidelinks]{hyperref}
+\usepackage{tikz, wasysym, tikz-cd}
+\usepackage{mathtools} %xrightarrow
+\usetikzlibrary{automata,arrows.meta,positioning,calc,decorations.pathmorphing}
+\usepackage{etoolbox} % setcounter{counter}{num}
+\usepackage{enumitem} % \begin{enumerate}[label=(\alph*)]
+
+\renewcommand{\baselinestretch}{1.5}
+
+% QUIVER STUFF
+% A TikZ style for curved arrows of a fixed height, due to AndréC.
+\tikzset{curve/.style={settings={#1},to path={(\tikztostart)
+    .. controls ($(\tikztostart)!\pv{pos}!(\tikztotarget)!\pv{height}!270:(\tikztotarget)$)
+    and ($(\tikztostart)!1-\pv{pos}!(\tikztotarget)!\pv{height}!270:(\tikztotarget)$)
+    .. (\tikztotarget)\tikztonodes}},
+    settings/.code={\tikzset{quiver/.cd,#1}
+        \def\pv##1{\pgfkeysvalueof{/tikz/quiver/##1}}},
+    quiver/.cd,pos/.initial=0.35,height/.initial=0}
+% TikZ arrowhead/tail styles.
+\tikzset{tail reversed/.code={\pgfsetarrowsstart{tikzcd to}}}
+\tikzset{2tail/.code={\pgfsetarrowsstart{Implies[reversed]}}}
+\tikzset{2tail reversed/.code={\pgfsetarrowsstart{Implies}}}
+% TikZ arrow styles.
+\tikzset{no body/.style={/tikz/dash pattern=on 0 off 1mm}}
+
+\theoremstyle{plain}
+\newtheorem{theorem}{Theorem}
+\newtheorem{lemma}{Lemma}
+\newtheorem{example}{Example}
+
+\theoremstyle{definition}
+\newtheorem{definition}{Definition}
+\newtheorem{problem}{Problem}
+
+\newenvironment{solution}
+  {\renewcommand\qedsymbol{$\blacksquare$}\begin{proof}[Solution]}
+  {\end{proof}}
+
+\lstset{
+    emph={
+        IntegrateAssignNames,
+        DefiningPolynomial,
+        ConstantField,
+        Parent,
+        PolynomialRing,
+        RationalField,
+        SquarefreeFactorisation,
+        SquarefreePartialFractionDecomposition,
+        XGCD,
+        Derivative,
+        hom,
+        Roots,
+        UnivariatePolynomial,
+        Resultant,
+        LogarithmicFieldExtension,
+        OrderedGenerators,
+        UnderlyingField,
+        DifferentialFieldExtension,
+        ConstantFieldExtension,
+        IsAlgebraicDifferentialField,
+        Generators,
+        CoefficientRing,
+        ExponentialFieldExtension,
+    },
+    emphstyle=\color{violet},
+    emph={[2]
+        eq,
+        in,
+        "&+"
+    },
+    emphstyle={[2]\color{teal}},
+    numbers=left,
+    basicstyle=\ttfamily,
+    numberstyle=\tiny,
+    breaklines=true,
+    xleftmargin=.25in,
+    escapechar='
+}
+
+\DeclareMathOperator{\im}{im}
+\DeclareMathOperator{\dom}{dom}
+\DeclareMathOperator{\cod}{cod}
+\DeclareMathOperator{\id}{id}
+\DeclareMathOperator{\res}{res}
+\DeclareMathOperator{\lc}{lc}
+\newcommand{\angles}[1]{\left<#1\right>}
+\newcommand{\catname}[1]{{\normalfont\textbf{#1}}}
+\newcommand{\GL}{\text{GL}}
+\newcommand{\SL}{\text{SL}}
+\newcommand{\sg}{\text{sg}}
+\newcommand{\dd}{\mathop{}\!d}
+\newcommand{\x}{{\bf x}}
+\newcommand{\y}{{\bf y}}
+\newcommand\defeq{\stackrel{\mathclap{\normalfont\mbox{\scriptsize def}}}{=}}
+\newcommand{\N}{\mathbb{N}}
+\newcommand{\Z}{\mathbb{Z}}
+\newcommand{\Q}{\mathbb{Q}}
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\C}{\mathbb{C}}
+
+\newcommand{\exref}[1]{\emph{Example \ref{#1}}}
+\newcommand{\defref}[1]{\emph{Definition \ref{#1}}}
+\newcommand{\propref}[1]{\emph{Proposition \ref{#1}}}
+\newcommand{\thmref}[1]{\emph{Theorem \ref{#1}}}
+\newcommand{\lineref}[1]{Line \ref{#1}}
+
+\DeclarePairedDelimiterX\set[1]\lbrace\rbrace{\def\given{\;\delimsize\vert\;}#1}
+ 
+\newcommand{\naturalto}{%
+  \mathrel{\vbox{\offinterlineskip
+    \mathsurround=0pt
+    \ialign{\hfil##\hfil\cr
+      \normalfont\scalebox{1.2}{.}\cr
+%      \noalign{\kern-.05ex}
+      $\longrightarrow$\cr}
+  }}%
+}
+
+\title{Magma Symbolic Integration Report}
+\author{Mitchell Holt}
+
+\begin{document}
+
+\maketitle
+
+\tableofcontents
+
+\newpage
+
+\section{Introduction and Background}
+
+This report describes an incomplete implementation of the Risch procedure for
+symbolic integration, as described by Geddes \cite{geddes:afca}. Rational
+integration (see DEFINITION TODO) has been implemented completely. Logarithmic
+integration (see DEFINITION TODO) is implemented, but not correct. The tests
+contain some failing cases. Although exponential integration is partially
+described in Geddes \cite{geddes:afca}, it has not been implemented. The
+integration of algebraic functions or other transcendentals (such as error
+functions) was beyond the scope of the project. \medbreak
+
+A significant design decision in the code is to allow the \emph{Risch Structure
+Theorem} \cite{risch:algprops} to be used to verify that each new logarithmic or
+exponential elementary field extension is transcendental, as is required. The
+\emph{Risch Structure Theorem} has not been implemented, but if one could be
+created then it would be trivial to add it to the existing code.
+
+\section{Differential Fields}
+
+In this section we describe the intrinsics in \lstinline{DifferentialFields.m},
+which are motivated by \defref{elementary_field}.
+
+\begin{definition}[Elementary Function Field] \label{elementary_field}
+    Let $K = \mathbb{Q}(\alpha_1, \dots, \alpha_m)$ be a constant differential
+    field (with differential operator $'$) where each $\alpha_i$ is algebraic
+    over $\mathbb{Q}$. Let $x$ be a transcendental symbol over $K$ satisfying
+    $x' = 1$ (in the differential field $(K(x),\, ')$). In the differential
+    extension field $K(x, \theta_1, \dots, \theta_n)$, we say each $\theta_j$
+    ($j = 1, \dots, n$) is \emph{elementary} over $K(x, \theta_1, \dots,
+    \theta_{j - 1})$ if $\theta_j$ is \emph{transcendental} over $K(x, \theta_1,
+    \dots, \theta_{j - 1})$ and either:
+    \begin{enumerate}[label=(\roman*)]
+        \item $\theta_j' = u'/u$ for some $u \in K(x, \theta_1, \dots,
+            \theta_{j - 1})$ (in which case we say $\theta_j$ is
+            \emph{logarithmic}), or
+        \item $\theta_j'/\theta_j = u'$ for some $u \in K(x, \theta_1, \dots,
+            \theta_{j - 1})$ (in which case we say $\theta_j$ is
+            \emph{exponential}).
+    \end{enumerate}
+    If each $\theta_j$ is elementary, then we say that $K(x, \theta_1, \dots,
+    \theta_{j - 1})$ is an \emph{elementary function field}.
+\end{definition}
+
+Ideally, we would represent the elementary function field $K(x,\, \theta_1,\,
+\dots,\, \theta_m)$ in Magma as an \lstinline{RngDiff} whose constant field is
+either the rational field or an absolute number field, and whose (ordered)
+generators are $x,\, \theta_1,\, \dots,\, \theta_m$. However, there are
+elementary function fields which cannot be constructed with a single call to the
+existing \lstinline{DifferentialFieldExtension} intrinsic because it requires
+the universe of the input sequence to be a multivariate polynomial ring (in our
+case over $K(x)$), rather than the field of fractions. For example, consider the
+elementary function field $\Q(x,\, \log x,\, \log(\log x))$, where
+$\log(\log x)$ has derivative $\frac 1 {x \log x} \not \in \Q(x)[\log x,\,
+\log(\log x)]$. \medbreak
+
+Therefore we represent elementary function fields either as $K(x)$, or as
+$F(\theta)$, where $F$ is an elementary function field and $\theta$ is
+elementary over $F$. In the case that $F$ is not $K(x)$, using
+\lstinline{DifferentialFieldExtension} does not set the generators of the field
+it returns correctly. Nils Bruin provides a fix for this bug in the case of a
+logarithmic extension:
+
+\begin{lstlisting}[numbers=none]
+fld := LogarithmicFieldExtension(F, f); // incorrect generators
+fld`Generators := [ fld | c : c in OrderedGenerators(UnderlyingField(fld)) ];
+\end{lstlisting}
+
+This does not work for exponential extensions. The intrinsic
+\lstinline{IsLogarithmic} assumes that the contruction of exponential extensions 
+works as intended (although it currently does not).
+
+\subsection{Documentation}
+
+\subsubsection*{\lstinline{IsPolyFractionField(F) : RngDiff -> BoolElt}}
+Checks if \lstinline{F} is of the form $K(x)$ for some constant field $K$.
+
+\subsubsection*{\lstinline{AsFraction(f) : RngDiffElt -> FldFunRatElt}}
+Return the representation of \lstinline{f} as a fraction inside the underlying
+field of \lstinline{Parent(f)}.
+
+\subsubsection*{\lstinline{IsPolynomial(f) : RngDiffElt -> BoolElt, RngUPolElt}}
+Let \lstinline{Parent(f)} be either $K(x)$ for some constant field $K$ or
+$F(\theta)$ for some elementary function field $F$ with $\theta$ elementary over
+$F$. Check if \lstinline{f} is in $K[x]$ or $F[\theta]$ respectively, and return
+its representation as a univariate polynomial if it is.
+
+\subsubsection*{\lstinline{ExtendConstantField(F, C) : RngDiff, Fld -> RngDiff}}
+This is the same as \lstinline{ConstantFieldExtension}, but works for any
+elementary function field (not just $K(x)$, which satisfies
+\lstinline{IsAlgebraicDifferentialField}).
+
+
+\subsubsection*{\lstinline{IsLogarithmic(F) : RngDiff -> BoolElt}}
+Check if \lstinline{F} is of the form $F(L)$ for some elementary function field
+$F$ and elementary function $L$.
+
+\subsubsection*{\lstinline{AllLogarithms(F) : RngDiff -> SeqEnum}}
+Give an ordered sequence of all of the logarithmic generators of \lstinline{F},
+with the last logarithm in the extension tower being the last to appear in the
+sequence.
+
+\subsubsection*{\lstinline{IsTranscendentalLogarithm(new, logarithms) : RngDiffElt, SeqEnum -> SeqEnum}}
+Let \lstinline{logarithms} be the logarithmic generators of an elementary
+function field $F$ and \lstinline{new} be of the form $\frac {u'} u$ for some
+$u \in F$. Use the \emph{Risch Structure Theorem} to check if $\log u$ is
+transcendental over $F$. If it is, return the empty sequence. If not, return a
+sequence $S$ of \lstinline{< factor, non-zero power >} pairs such that $u =
+\prod_{(g, k) \in S} g^k$.
+
+\subsubsection*{\lstinline{LogarithmicExtension(F, f) : RngDiff, RngDiffElt -> RngDiff, SeqEnum, RngDiffElt}}
+
+Named parameters:
+\begin{itemize}
+    \item[] \lstinline{logarithms : SeqEnum} with default value \lstinline{[]}.
+\end{itemize}
+
+\noindent Return the differential extension field $F(L)$, where $L$ is
+logarithmic over $F$ with derivative $f$, noting that it may be the case the
+$F(L) = F$. Also return all of the logarithms of $F(L)$ and the representation
+of $L$ inside of $F(L)$. If \lstinline{logarithms} is non-empty, it is assumed
+that these are all of the logarithmic generators of $F$. Otherwise, the
+logarithms will be calculated.
+
+\subsubsection*{\lstinline{ExponentialExtension(F, f) : RngDiff, RngDiffElt  -> RngDiff, SeqEnum, RngDiffElt}}
+
+Named parameters:
+\begin{itemize}
+    \item[] \lstinline{exponentials : SeqEnum} with default value \lstinline{[]}.
+\end{itemize}
+
+\noindent Return the differential extension field $F(E)$, where $E$ is
+exponential over $F$ with derivative $fE$, noting that it may be the case the
+$F(E) = F$. Also return all of the logarithms of $F(E)$ and the representation
+of $E$ inside of $F(E)$. If \lstinline{exponentials} is non-empty, it is assumed
+that these are all of the exponential generators of $F$. Otherwise, the
+exponentals will be calculated. \medbreak
+
+This function does not currently work, for example the derivative of $\exp x$ is
+not set correctly in the construction of $\Q(x,\, \log x,\, \exp x)$. It seems
+that the problem may be in the intrinsic \lstinline{DifferentialFieldExtension},
+which is called by \lstinline{ExponentialFieldExtension}.
+
+\lstinputlisting{exp_err}
+
+\subsubsection*{\lstinline{NameField(~F) : RngDiff ->}}
+
+Named parameters:
+\begin{itemize}
+    \item[] \lstinline{FirstExtName : MonStgElt} with default value
+        \lstinline{"x"}.
+    \item[] \lstinline{AlgNumName : MonStgElt} with default value
+        \lstinline{"a"}.
+\end{itemize}
+
+\noindent Using sensible defaults, name the transcendental generators of $F$ and
+the generator of its constant field $K$ (if any) for readable printing of
+elements of $F$. \lstinline{FirstExtName} is the name to be assigned to the
+(unique) transcendental over the constant field which has derivative $1$.
+
+\section{Integration}
+There is a single intrinsic inside \lstinline{Integration.m}, which handles
+deciding how to integrate an elementary function and calls the relevant routine,
+depending on whether the input is a rational function, is logarithmic, or is
+exponential.
+
+\begin{definition}[Integration] \label{elt_int}
+    Let $F$ be an elementary function field and $f \in F$. If there exists a
+    finitely and explicitly generated elementary extension $G$ of $F$ and a $g
+    \in G$ with $g' = f$, then we say $g$ is the \emph{elementary
+    anti-derivative} or \emph{elementary integral} of $f$ and write $\int f =
+    g$. If no such $g$ or $G$ exist, we say that $f$ has no elementary integral.
+\end{definition}
+
+\subsection{Documentation}
+
+\subsubsection*{\lstinline{ElementaryIntegral(f) : RngDiffElt -> BoolElt, RngDiffElt, SeqEnum}}
+
+Named parameters:
+\begin{itemize}
+    \item[] \lstinline{all_logarithms} with default value \lstinline{[]}.
+\end{itemize}
+
+\noindent Check if the given elementary function has an elementary integral. If
+it does, return an integral and a list of all the logarithms needed to generate
+the smallest extension of the field that the input comes from. \medbreak
+
+Note that, by \emph{Lioville's Principle} (see Geddes \cite{geddes:afca}, \S
+12.4) the only elementary extensions required to express the integral of an 
+elementary function are logarithmic, so we need only return all of the
+logarithmic generators of the field the integral comes from.
+
+\section{Rational Integration}
+A \emph{rational function} is an element of $\Q(x)$. Note that, for rational
+integration, an elementary integral always exists.
+
+\subsection{Documentation}
+
+\section{Logarithmic Integration}
+\begin{itemize}
+    \item Brief intro.
+    \item Cite Geddes.
+    \item Give derivations of the less obvious parts of some intrinsics.
+\end{itemize}
+
+\subsection{Documentation}
+
+\addcontentsline{toc}{section}{References}
+\bibliographystyle{plain}
+\bibliography{bibliography}
+
+\end{document}
