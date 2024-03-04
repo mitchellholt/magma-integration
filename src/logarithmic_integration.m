@@ -136,12 +136,11 @@ intrinsic IntegrateLogarithmicPolynomial(f :: RngDiffElt: all_logarithms := [])
     end while;
 
     is_elementary, integral, logs := ElementaryIntegral(
-                PrevFld ! (ps[1] + qs[2]*Derivative(F.1)):
+                PrevFld ! (ps[1] - qs[2]*Derivative(F.1)):
                 all_logarithms := prev_logarithms);
     if not is_elementary then
         return false, integral, all_logarithms;
     end if;
-    integral *:= -1;
 
     G := Parent(integral);
     if not IsCoercible(G, F.1) then // this could make some errors
