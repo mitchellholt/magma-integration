@@ -143,20 +143,14 @@ intrinsic IntegrateLogarithmicPolynomial(f :: RngDiffElt: all_logarithms := [])
     end if;
 
     G := Parent(integral);
-    if not IsCoercible(G, F.1) then // this could make some errors
-        G, logs, rep := LogarithmicExtension(
-            G, G ! Derivative(F.1): logarithms := logs);
-        // TODO implement this
-        error if rep ne G.1,
-            "Not implemented. TODO need F.1 to be the transcendental stored";
-    end if;
+    // all new logarithms in G are logarithmic OVER F
+    G, all_logarithms, F_rep := LogarithmicExtension(G, G!Derivative(F.1));
 
-    ChangeUniverse(~qs, G);
     for i in [ 0 .. deg + 1 ] do
-        integral +:= qs[i + 1] * G.1^i;
+        integral +:= G!(qs[i + 1]) * F_rep^i; // hopefully coercion is successful
     end for;
 
-    return true, integral, logs;
+    return true, integral, all_logarithms;
 end intrinsic;
 
 
