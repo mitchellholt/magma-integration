@@ -147,7 +147,7 @@ intrinsic IntegrateLogarithmicPolynomial(f :: RngDiffElt: all_logarithms := [])
     G, all_logarithms, F_rep := LogarithmicExtension(G, G!Derivative(F.1));
 
     for i in [ 0 .. deg + 1 ] do
-        integral +:= G!(qs[i + 1]) * F_rep^i; // hopefully coercion is successful
+        integral +:= G!(qs[i + 1]) * F_rep^i; // hopefully coercion is correct
     end for;
 
     return true, integral, all_logarithms;

@@ -1,0 +1,8 @@
+> F<x> := RationalDifferentialField(RationalField());
+> A<a> := LogarithmicFieldExtension(F, 1/x);
+> B<b> := ExponentialFieldExtension(F, 1);
+> B<b> := ExponentialFieldExtension(F, F!1);
+> IsCoercible(A, b);
+true a
+> IsCoercible(B, a);
+true b

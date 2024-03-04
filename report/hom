@@ -1,0 +1,10 @@
+> A<a> := LogarithmicFieldExtension(F, 1/(x + 1));
+> B<b> := LogarithmicFieldExtension(A, A!(1/x));
+> G<g> := LogarithmicFieldExtension(F, 1/x);
+> B!g;
+a
+> inj := hom< G -> B | B!a >;
+
+>> inj := hom< G -> B | B!a >;
+             ^
+Runtime error in hom< ... >: Cannot build homomorphism from this domain
