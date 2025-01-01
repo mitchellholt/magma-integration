@@ -53,6 +53,14 @@ H := LogarithmicExtension(G, G!(1/(x*g)));
 elementary, integral := LogarithmicIntegral(H.1);
 assert not elementary;
 
+// integrate log(x)^2/x^3
+h := G!(g^2/x^3);
+elementary, integral := LogarithmicIntegral(h);
+assert elementary;
+// For whatever reason, the signs are incorrect on all coeffs of the polynomial
+// (in log(x)) EXCEPT the leading one?
+assert Derivative(integral) eq Parent(integral)!h;
+
 // Geddes example 12.11
 A<a> := LogarithmicExtension(F, F!(1/(x + 1/2)));
 B<b> := LogarithmicExtension(A, A!(1/x));
