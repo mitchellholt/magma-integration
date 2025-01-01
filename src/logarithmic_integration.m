@@ -127,7 +127,7 @@ intrinsic IntegrateLogarithmicPolynomial(f :: RngDiffElt: all_logarithms := [])
         end if;
 
         is_poly, poly := IsPolynomial(F ! integral);
-        if not is_poly(f) or Degree(poly) gt 1 then
+        if not is_poly or Degree(poly) gt 1 then
             return false, integral, all_logarithms;
         end if;
         qs[i + 2] +:= Coefficient(poly, 1)/(i + 1);
